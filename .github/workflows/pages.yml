@@ -48,11 +48,18 @@ jobs:
             --exclude 'README.md' \
             ./ _site/
 
-      # enablement: true turns Pages on for the repository the first time this
-      # runs, so no manual switch in Settings is needed.
+      # enablement: true turns Pages on when the workflow token is allowed to.
+      # On a repository that has never had Pages, it usually is not, and this
+      # step fails until someone enables Pages once by hand.
       - uses: actions/configure-pages@v5
+        id: pages
         with:
           enablement: true
+
+      - name: Explain how to finish enabling Pages
+        if: failure()
+        run: |
+          echo "::error title=GitHub Pages is not enabled::Open Settings -> Pages, set Source to 'GitHub Actions', then re-run this workflow. This is a one-time step."
 
       - uses: actions/upload-pages-artifact@v3
         with:
