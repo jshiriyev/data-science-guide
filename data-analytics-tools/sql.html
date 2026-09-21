@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL — Data Science Guide</title>
+<meta name="description" content="Query evaluation order, joins, aggregation, window functions, CTEs, DML/DDL, and the dialect differences that bite.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='14'>&#128202;</text></svg>">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/sheet.css">
+<script src="../assets/js/theme.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar__home" href="../">Data Science Guide</a>
+  <span class="topbar__crumb">/ Data Analytics Tools / SQL</span>
+  <span class="topbar__spacer"></span>
+  <button class="btn" type="button" data-theme-toggle>Theme</button>
+  <button class="btn" type="button" onclick="window.print()">Print</button>
+</header>
+
+<main class="wrap">
+
+  <div class="intro">
+    <h1>SQL</h1>
+    <p>
+      The parts of SQL that come up in analysis work: how a query is actually evaluated,
+      the join and aggregation patterns worth knowing by heart, window functions, and the
+      places where dialects quietly disagree.
+    </p>
+    <div class="meta">
+      <span class="tag">Data Analytics Tools</span>
+      <span class="tag">ANSI SQL</span>
+      <span class="tag">PostgreSQL &middot; MySQL &middot; SQL Server &middot; SQLite &middot; BigQuery &middot; Snowflake</span>
+    </div>
+  </div>
+
+  <div class="sheet">
+
+    <nav class="toc" aria-label="Sections">
+      <p class="toc__label">Sections</p>
+      <div class="toc__list" data-toc></div>
+    </nav>
+
+    <div>
+
+      <div class="search no-print">
+        <input type="search" data-search aria-label="Filter cheat sheet blocks"
+               placeholder="Filter blocks &mdash; try &ldquo;window&rdquo;, &ldquo;left join&rdquo;, &ldquo;null&rdquo;  (press /)">
+        <div class="search__count" data-search-count aria-live="polite"></div>
+      </div>
+
+      <p class="empty is-hidden" data-empty>Nothing matches that filter.</p>
+
+      <!-- =============================================================== -->
+      <section class="section" id="order">
+        <h2>Query skeleton &amp; evaluation order</h2>
+        <p class="section__note">
+          SQL is written in one order and evaluated in another. Most confusing errors
+          &mdash; &ldquo;column does not exist&rdquo;, an alias that works in one clause but not
+          another &mdash; come from that mismatch.
+        </p>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>Written order</h3>
+            <div class="code"><pre>SELECT   col, agg(col)
+FROM     table
+JOIN     other ON ...
+WHERE    row_filter
+GROUP BY col
+HAVING   group_filter
+ORDER BY col
+LIMIT    n;</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Logical evaluation order</h3>
+            <div class="code"><pre>1. FROM / JOIN   build the row source
+2. WHERE         drop rows (no aggregates yet)
+3. GROUP BY      collapse rows into groups
+4. HAVING        drop groups (aggregates OK)
+5. SELECT        compute output columns
+                 window functions run here
+6. DISTINCT      de-duplicate
+7. ORDER BY      sort (SELECT aliases OK)
+8. LIMIT/OFFSET  slice</pre></div>
+            <div class="note">
+              <strong>Consequences.</strong> <code>WHERE</code> sees neither aggregates nor
+              <code>SELECT</code> aliases; <code>HAVING</code> sees aggregates;
+              <code>ORDER BY</code> sees aliases; only <code>ORDER BY</code> and
+              <code>LIMIT</code> see a window function&rsquo;s result.
+            </div>
+          </div>
+
+          <div class="card card--wide">
+            <h3>Filtering a window result needs a wrapper</h3>
+            <div class="code"><pre>-- Wrong: at WHERE time the window function has not run yet.
+SELECT name, ROW_NUMBER() OVER (ORDER BY score DESC) AS rn
+FROM   players
+WHERE  rn &lt;= 3;                      -- error: "rn" does not exist
+
+-- Right: compute it in a CTE, filter outside.
+WITH ranked AS (
+  SELECT name, ROW_NUMBER() OVER (ORDER BY score DESC) AS rn
+  FROM   players
+)
+SELECT name FROM ranked WHERE rn &lt;= 3;</pre></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="select">
+        <h2>Selecting &amp; shaping rows</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>Columns, aliases, DISTINCT</h3>
+            <div class="code"><pre>SELECT DISTINCT
+       u.id                      AS user_id,
+       u.first_name || ' ' || u.last_name AS full_name,
+       u.score * 1.0 / 100       AS pct
+FROM   users AS u;</pre></div>
+            <div class="note">
+              Always write <code>AS</code> for output columns. A missing comma turns
+              <code>a, b</code> into <code>a AS b</code> and the query still runs.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Sorting</h3>
+            <div class="code"><pre>ORDER BY score DESC, name ASC
+
+-- NULL placement (Postgres, Oracle, SQLite 3.30+)
+ORDER BY score DESC NULLS LAST
+
+-- Portable equivalent
+ORDER BY (score IS NULL), score DESC
+
+-- Sorting by an alias is legal: ORDER BY runs last
+SELECT price * qty AS total FROM sales ORDER BY total DESC;</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Limiting &amp; paging</h3>
+            <div class="code"><pre>-- Postgres, MySQL, SQLite, BigQuery, Snowflake
+SELECT * FROM t ORDER BY id LIMIT 20 OFFSET 40;
+
+-- SQL Server / ANSI
+SELECT * FROM t ORDER BY id
+OFFSET 40 ROWS FETCH NEXT 20 ROWS ONLY;
+
+SELECT TOP 20 * FROM t ORDER BY id;     -- SQL Server</pre></div>
+            <div class="note note--warn">
+              <strong>Pair <code>LIMIT</code> with a deterministic <code>ORDER BY</code>.</strong>
+              Otherwise you get whichever rows the engine produced first, and that can
+              change between runs. Break ties on a unique column.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>CASE &mdash; conditional columns</h3>
+            <div class="code"><pre>SELECT amount,
+       CASE
+         WHEN amount &gt;= 1000 THEN 'large'
+         WHEN amount &gt;= 100  THEN 'medium'
+         ELSE 'small'
+       END AS bucket
+FROM orders;</pre></div>
+            <div class="note">
+              Arms are tested top to bottom, so order them most specific first.
+              With no <code>ELSE</code>, unmatched rows get <code>NULL</code>.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="filter">
+        <h2>Filtering</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>Predicates</h3>
+            <div class="code"><pre>WHERE status = 'active'
+  AND price BETWEEN 10 AND 20          -- inclusive at both ends
+  AND country IN ('US', 'CA', 'MX')
+  AND created_at &gt;= DATE '2026-01-01'
+  AND deleted_at IS NULL
+  AND score &lt;&gt; 0;                      -- ANSI not-equal (!= also works)</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Pattern matching</h3>
+            <div class="code"><pre>WHERE email LIKE '%@example.com'    -- % = any run, _ = one character
+WHERE name  ILIKE 'ana%'           -- Postgres: case-insensitive
+WHERE name  LIKE '100!%' ESCAPE '!'  -- match a literal percent sign
+WHERE name  ~ '^A[nl]'             -- Postgres regex
+WHERE REGEXP_CONTAINS(name, r'^A') -- BigQuery</pre></div>
+            <div class="note note--warn">
+              A leading <code>%</code> forces a scan &mdash; a B-tree index cannot help when
+              the prefix is unknown.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Boolean precedence</h3>
+            <div class="code"><pre>-- AND binds tighter than OR, so this is not what it looks like:
+WHERE country = 'US' OR country = 'CA' AND active
+-- parsed as: country = 'US' OR (country = 'CA' AND active)
+
+-- Say what you mean:
+WHERE (country = 'US' OR country = 'CA') AND active</pre></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="nulls">
+        <h2>NULL &amp; three-valued logic</h2>
+        <p class="section__note">
+          <code>NULL</code> means &ldquo;unknown&rdquo;, not &ldquo;empty&rdquo;. Comparisons against it
+          yield <code>UNKNOWN</code>, and <code>WHERE</code> keeps only rows that are
+          <code>TRUE</code> &mdash; so <code>UNKNOWN</code> rows silently disappear.
+        </p>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>Testing for NULL</h3>
+            <div class="code"><pre>WHERE col IS NULL         -- correct
+WHERE col IS NOT NULL
+
+WHERE col = NULL          -- never true, returns nothing
+WHERE col &lt;&gt; 'x'          -- drops rows where col IS NULL
+
+-- Keep the NULLs explicitly:
+WHERE col &lt;&gt; 'x' OR col IS NULL
+WHERE col IS DISTINCT FROM 'x'   -- Postgres: NULL-safe
+WHERE NOT (col &lt;=&gt; 'x')          -- MySQL: NULL-safe equality</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Substituting a default</h3>
+            <div class="code"><pre>COALESCE(a, b, c)        -- first non-NULL argument (ANSI)
+NULLIF(a, b)             -- NULL when a = b, else a
+
+IFNULL(a, 0)             -- MySQL, SQLite, BigQuery
+ISNULL(a, 0)             -- SQL Server
+NVL(a, 0)                -- Oracle
+
+-- Guard a division:
+SELECT total / NULLIF(count, 0) AS avg_value FROM t;</pre></div>
+            <div class="note note--ok">
+              <code>NULLIF</code> turns a zero denominator into <code>NULL</code>, so the
+              division returns <code>NULL</code> instead of raising a divide-by-zero error.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>NULL in aggregates &amp; keys</h3>
+            <div class="code"><pre>COUNT(*)        counts rows, NULLs included
+COUNT(col)      skips NULLs in col
+SUM, AVG, MIN   skip NULLs  (AVG divides by the non-NULL count)
+SUM of no rows  returns NULL, not 0  -&gt; COALESCE(SUM(x), 0)
+
+GROUP BY        groups all NULLs together as one group
+ORDER BY        NULLs sort last in Postgres/Oracle DESC-first rules,
+                first in MySQL/SQLite -- state NULLS FIRST/LAST
+UNIQUE          permits multiple NULLs in most engines</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>NOT IN with a NULL is a trap</h3>
+            <div class="code"><pre>-- If the subquery returns even one NULL, this returns no rows at all:
+SELECT * FROM users
+WHERE id NOT IN (SELECT user_id FROM orders);   -- user_id nullable!
+
+-- Because: id NOT IN (1, NULL) is UNKNOWN, never TRUE.
+
+-- Safe alternatives:
+WHERE id NOT IN (SELECT user_id FROM orders WHERE user_id IS NOT NULL)
+
+SELECT * FROM users u
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id);</pre></div>
+            <div class="note note--warn">
+              <code>NOT EXISTS</code> is the habit worth forming &mdash; it is NULL-safe and
+              usually plans at least as well.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="joins">
+        <h2>Joins</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>The join types</h3>
+            <div class="tbl-scroll">
+              <table class="tbl">
+                <thead>
+                  <tr><th>Join</th><th>Keeps</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>INNER JOIN</code></td><td>Only rows matching on both sides</td></tr>
+                  <tr><td><code>LEFT JOIN</code></td><td>All left rows; right columns <code>NULL</code> when unmatched</td></tr>
+                  <tr><td><code>RIGHT JOIN</code></td><td>Mirror of left (rare &mdash; reorder and use <code>LEFT</code>)</td></tr>
+                  <tr><td><code>FULL OUTER JOIN</code></td><td>All rows from both sides</td></tr>
+                  <tr><td><code>CROSS JOIN</code></td><td>Cartesian product, every pair</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="note">
+              Plain <code>JOIN</code> means <code>INNER JOIN</code>. MySQL and SQLite have no
+              <code>FULL OUTER JOIN</code> before recent versions &mdash; emulate it with
+              <code>LEFT ... UNION ALL ...</code> of the unmatched right rows.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Basic syntax</h3>
+            <div class="code"><pre>SELECT o.id, u.email, p.name
+FROM       orders   AS o
+JOIN       users    AS u ON u.id = o.user_id
+LEFT JOIN  products AS p ON p.id = o.product_id
+WHERE      o.created_at &gt;= DATE '2026-01-01';
+
+-- USING when the column names match on both sides:
+FROM orders JOIN users USING (user_id)</pre></div>
+          </div>
+
+          <div class="card card--wide">
+            <h3>WHERE on the outer table cancels the LEFT JOIN</h3>
+            <div class="code"><pre>-- This quietly becomes an INNER JOIN: unmatched rows have
+-- o.status = NULL, which fails the WHERE test.
+SELECT u.id, o.id
+FROM   users u
+LEFT JOIN orders o ON o.user_id = u.id
+WHERE  o.status = 'paid';
+
+-- Put the condition in the ON clause to keep unmatched users:
+LEFT JOIN orders o ON o.user_id = u.id AND o.status = 'paid';</pre></div>
+            <div class="note">
+              Rule of thumb: conditions on the <em>optional</em> side of an outer join belong
+              in <code>ON</code>; conditions on the preserved side belong in <code>WHERE</code>.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Anti-join &mdash; rows with no match</h3>
+            <div class="code"><pre>-- Users who have never ordered.
+SELECT u.*
+FROM   users u
+LEFT JOIN orders o ON o.user_id = u.id
+WHERE  o.user_id IS NULL;
+
+-- Same thing, usually clearer and NULL-safe:
+SELECT u.* FROM users u
+WHERE NOT EXISTS (
+  SELECT 1 FROM orders o WHERE o.user_id = u.id
+);</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Semi-join &mdash; matched, but no duplication</h3>
+            <div class="code"><pre>-- EXISTS stops at the first match, so one row per user.
+SELECT u.* FROM users u
+WHERE EXISTS (
+  SELECT 1 FROM orders o
+  WHERE o.user_id = u.id AND o.total &gt; 100
+);
+
+-- A plain JOIN would repeat the user once per qualifying order.</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Self-join</h3>
+            <div class="code"><pre>-- Each employee next to their manager.
+SELECT e.name AS employee, m.name AS manager
+FROM   employees e
+LEFT JOIN employees m ON m.id = e.manager_id;</pre></div>
+            <div class="note">
+              Aliases are mandatory here &mdash; they are the only way to tell the two copies
+              of the table apart.
+            </div>
+          </div>
+
+          <div class="card card--wide">
+            <h3>Fan-out: the silent double-count</h3>
+            <div class="code"><pre>-- If a user has 3 orders, the user's row repeats 3 times and
+-- any aggregate over user columns is inflated.
+SELECT u.id, SUM(u.credit)       -- WRONG: credit counted 3x
+FROM   users u JOIN orders o ON o.user_id = u.id
+GROUP BY u.id;
+
+-- Aggregate first, then join one row to one row:
+SELECT u.id, u.credit, o.order_count
+FROM   users u
+LEFT JOIN (
+  SELECT user_id, COUNT(*) AS order_count
+  FROM   orders GROUP BY user_id
+) o ON o.user_id = u.id;</pre></div>
+            <div class="note note--warn">
+              Whenever a join makes a total grow unexpectedly, check the grain: a join is
+              only safe for aggregation when the right side is unique on the join key.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="aggregate">
+        <h2>Grouping &amp; aggregation</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>Aggregate functions</h3>
+            <div class="code"><pre>COUNT(*)              rows in the group
+COUNT(col)            non-NULL values
+COUNT(DISTINCT col)   distinct non-NULL values
+SUM(col)  AVG(col)  MIN(col)  MAX(col)
+STDDEV(col)  VARIANCE(col)
+
+-- String rollup (dialect-specific):
+STRING_AGG(name, ', ' ORDER BY name)  -- Postgres, SQL Server, BigQuery
+GROUP_CONCAT(name)                    -- MySQL, SQLite
+LISTAGG(name, ', ')                   -- Oracle, Snowflake</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>GROUP BY and HAVING</h3>
+            <div class="code"><pre>SELECT   country, COUNT(*) AS n, AVG(total) AS avg_total
+FROM     orders
+WHERE    created_at &gt;= DATE '2026-01-01'   -- filter rows first
+GROUP BY country
+HAVING   COUNT(*) &gt;= 10                    -- then filter groups
+ORDER BY n DESC;</pre></div>
+            <div class="note">
+              Every non-aggregated <code>SELECT</code> column must appear in
+              <code>GROUP BY</code>. Postgres relaxes this when you group by a primary key;
+              MySQL relaxes it further unless <code>ONLY_FULL_GROUP_BY</code> is on &mdash;
+              do not rely on either.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Conditional aggregation</h3>
+            <div class="code"><pre>-- Several measures in one pass over the table.
+SELECT country,
+       COUNT(*)                                        AS orders,
+       COUNT(*) FILTER (WHERE status = 'paid')         AS paid,
+       SUM(CASE WHEN status = 'paid' THEN total END)   AS paid_total,
+       AVG(CASE WHEN status = 'paid' THEN total END)   AS paid_avg
+FROM   orders
+GROUP BY country;</pre></div>
+            <div class="note">
+              <code>FILTER (WHERE ...)</code> is ANSI and supported by Postgres and SQLite.
+              The <code>CASE</code> form works everywhere: the implicit <code>ELSE NULL</code>
+              is what keeps non-matching rows out of the aggregate.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Pivoting with CASE</h3>
+            <div class="code"><pre>SELECT product,
+       SUM(CASE WHEN quarter = 'Q1' THEN revenue ELSE 0 END) AS q1,
+       SUM(CASE WHEN quarter = 'Q2' THEN revenue ELSE 0 END) AS q2,
+       SUM(CASE WHEN quarter = 'Q3' THEN revenue ELSE 0 END) AS q3,
+       SUM(CASE WHEN quarter = 'Q4' THEN revenue ELSE 0 END) AS q4
+FROM   sales
+GROUP BY product;</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Subtotals: ROLLUP, CUBE, GROUPING SETS</h3>
+            <div class="code"><pre>-- Country totals, plus a grand total row.
+SELECT country, city, SUM(total)
+FROM   orders
+GROUP BY ROLLUP (country, city);
+
+-- Every combination of the two dimensions.
+GROUP BY CUBE (country, city)
+
+-- Exactly the combinations you name.
+GROUP BY GROUPING SETS ((country), (city), ())
+
+-- Tell a subtotal NULL apart from a real one:
+SELECT GROUPING(city) AS is_subtotal, ...</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Percentiles</h3>
+            <div class="code"><pre>SELECT
+  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total) AS median,
+  PERCENTILE_CONT(0.9) WITHIN GROUP (ORDER BY total) AS p90
+FROM orders;
+
+-- MySQL / BigQuery use APPROX_QUANTILES or window forms instead.</pre></div>
+            <div class="note">
+              <code>PERCENTILE_CONT</code> interpolates between values;
+              <code>PERCENTILE_DISC</code> returns an actual value from the data.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="window">
+        <h2>Window functions</h2>
+        <p class="section__note">
+          A window function computes across a set of related rows but, unlike
+          <code>GROUP BY</code>, keeps every row. This is the single highest-leverage
+          part of SQL for analysis.
+        </p>
+
+        <div class="cards">
+
+          <div class="card card--wide">
+            <h3>Anatomy</h3>
+            <div class="code"><pre>function() OVER (
+  PARTITION BY col      -- restart the calculation per group (optional)
+  ORDER BY     col      -- order within the partition (required for ranking)
+  ROWS BETWEEN ...      -- frame: which rows feed the calculation
+)
+
+-- Reuse one definition across several columns:
+SELECT name,
+       SUM(total)   OVER w AS running_total,
+       ROW_NUMBER() OVER w AS n
+FROM   orders
+WINDOW w AS (PARTITION BY user_id ORDER BY created_at);</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Ranking</h3>
+            <div class="code"><pre>ROW_NUMBER()  1,2,3,4   always distinct, ties broken arbitrarily
+RANK()        1,2,2,4   ties share a rank, then it skips
+DENSE_RANK()  1,2,2,3   ties share a rank, no gap
+NTILE(4)      splits the partition into 4 buckets
+PERCENT_RANK()  CUME_DIST()
+
+SELECT name, department, salary,
+       RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS r
+FROM employees;</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Top N per group</h3>
+            <div class="code"><pre>-- The three highest-paid people in each department.
+WITH ranked AS (
+  SELECT name, department, salary,
+         ROW_NUMBER() OVER (PARTITION BY department
+                            ORDER BY salary DESC, name) AS rn
+  FROM   employees
+)
+SELECT name, department, salary
+FROM   ranked
+WHERE  rn &lt;= 3;</pre></div>
+            <div class="note note--ok">
+              Use <code>ROW_NUMBER</code> for &ldquo;exactly three&rdquo; and <code>RANK</code>
+              for &ldquo;three, plus anyone tied for third&rdquo;. Add a tiebreaker to
+              <code>ORDER BY</code> so the result is reproducible.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Comparing to neighbouring rows</h3>
+            <div class="code"><pre>SELECT day, revenue,
+       LAG(revenue)  OVER (ORDER BY day) AS prev_day,
+       LEAD(revenue) OVER (ORDER BY day) AS next_day,
+       revenue - LAG(revenue) OVER (ORDER BY day) AS change,
+       FIRST_VALUE(revenue) OVER (ORDER BY day) AS first_day
+FROM   daily_revenue;
+
+LAG(col, 2, 0)   -- two rows back, 0 when there is none</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Running totals &amp; moving averages</h3>
+            <div class="code"><pre>SELECT day, revenue,
+       -- running total from the start of the partition
+       SUM(revenue) OVER (
+         ORDER BY day
+         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+       ) AS running_total,
+
+       -- trailing 7-row average
+       AVG(revenue) OVER (
+         ORDER BY day
+         ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+       ) AS avg_7
+FROM daily_revenue;</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Frames: ROWS vs RANGE</h3>
+            <div class="code"><pre>ROWS BETWEEN 6 PRECEDING AND CURRENT ROW     -- counts rows
+RANGE BETWEEN INTERVAL '6 days' PRECEDING
+          AND CURRENT ROW                    -- counts values
+
+-- Default frame when ORDER BY is present but no frame is given:
+RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</pre></div>
+            <div class="note note--warn">
+              That default is <code>RANGE</code>, so tied <code>ORDER BY</code> values are
+              all folded into the current row &mdash; a &ldquo;running total&rdquo; jumps in
+              steps when a day has several rows. Write <code>ROWS</code> explicitly when you
+              mean row counts.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Share of total without a self-join</h3>
+            <div class="code"><pre>SELECT department, name, salary,
+       salary * 100.0
+         / SUM(salary) OVER (PARTITION BY department) AS pct_of_dept,
+       salary - AVG(salary) OVER (PARTITION BY department) AS vs_dept_avg
+FROM   employees;</pre></div>
+            <div class="note">
+              Omitting <code>ORDER BY</code> makes the frame the whole partition &mdash;
+              which is exactly what a denominator wants.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Deduplicating</h3>
+            <div class="code"><pre>-- Keep the most recent row per key.
+WITH numbered AS (
+  SELECT *,
+         ROW_NUMBER() OVER (PARTITION BY email
+                            ORDER BY updated_at DESC) AS rn
+  FROM   users
+)
+SELECT * FROM numbered WHERE rn = 1;</pre></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="cte">
+        <h2>CTEs &amp; subqueries</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>WITH &mdash; naming the steps</h3>
+            <div class="code"><pre>WITH recent_orders AS (
+  SELECT * FROM orders WHERE created_at &gt;= DATE '2026-01-01'
+),
+per_user AS (
+  SELECT user_id, COUNT(*) AS n, SUM(total) AS spend
+  FROM   recent_orders
+  GROUP BY user_id
+)
+SELECT u.email, p.n, p.spend
+FROM   per_user p
+JOIN   users u ON u.id = p.user_id
+WHERE  p.spend &gt; 500;</pre></div>
+            <div class="note">
+              A later CTE can reference an earlier one, which is what makes a long
+              transformation readable top to bottom.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Subquery positions</h3>
+            <div class="code"><pre>-- Scalar: must return one row, one column
+SELECT name, (SELECT AVG(salary) FROM employees) AS company_avg
+FROM employees;
+
+-- Derived table: in FROM, alias required
+SELECT d.department, d.avg_salary
+FROM  (SELECT department, AVG(salary) AS avg_salary
+       FROM employees GROUP BY department) AS d;
+
+-- Correlated: re-evaluated per outer row
+SELECT e.name
+FROM   employees e
+WHERE  e.salary &gt; (SELECT AVG(salary) FROM employees
+                   WHERE department = e.department);</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Recursive CTE</h3>
+            <div class="code"><pre>-- Walk an org chart down from the top.
+WITH RECURSIVE chain AS (
+  SELECT id, name, manager_id, 1 AS depth       -- anchor
+  FROM   employees WHERE manager_id IS NULL
+  UNION ALL
+  SELECT e.id, e.name, e.manager_id, c.depth + 1 -- recursive step
+  FROM   employees e
+  JOIN   chain c ON e.manager_id = c.id
+  WHERE  c.depth &lt; 10                            -- guard
+)
+SELECT * FROM chain ORDER BY depth;</pre></div>
+            <div class="note note--warn">
+              Always bound the recursion. A cycle in the data with no depth guard runs
+              until the server kills the query. SQL Server omits the
+              <code>RECURSIVE</code> keyword.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Generating a date series</h3>
+            <div class="code"><pre>-- Postgres: a row per day, so reports show zero-activity days.
+SELECT d::date AS day
+FROM generate_series(DATE '2026-01-01', DATE '2026-01-31',
+                     INTERVAL '1 day') AS d;
+
+-- Portable: recursive CTE
+WITH RECURSIVE days(day) AS (
+  SELECT DATE '2026-01-01'
+  UNION ALL
+  SELECT day + 1 FROM days WHERE day &lt; DATE '2026-01-31'
+)
+SELECT * FROM days;</pre></div>
+            <div class="note note--ok">
+              <code>LEFT JOIN</code> your data onto the series to turn missing days into
+              explicit zeros rather than absent rows.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>CTE performance</h3>
+            <div class="code"><pre>-- Postgres &lt; 12 always materialised a CTE (an optimisation fence).
+-- Postgres 12+ inlines single-use CTEs; force it either way:
+WITH x AS MATERIALIZED     (...)
+WITH x AS NOT MATERIALIZED (...)</pre></div>
+            <div class="note">
+              A CTE referenced several times may be computed several times in some engines.
+              If it is expensive, write it to a temporary table instead.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="sets">
+        <h2>Set operations</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>UNION, INTERSECT, EXCEPT</h3>
+            <div class="code"><pre>SELECT id FROM a UNION     SELECT id FROM b;  -- both, de-duplicated
+SELECT id FROM a UNION ALL SELECT id FROM b;  -- both, duplicates kept
+SELECT id FROM a INTERSECT SELECT id FROM b;  -- in both
+SELECT id FROM a EXCEPT    SELECT id FROM b;  -- in a, not in b
+                                              -- MINUS in Oracle</pre></div>
+            <div class="note">
+              Column count and types must line up; names come from the first branch.
+              <code>ORDER BY</code> applies to the whole result and goes last.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Prefer UNION ALL</h3>
+            <div class="code"><pre>-- UNION sorts or hashes everything to remove duplicates.
+-- When the branches cannot overlap, that work is wasted:
+SELECT id, 'web'    AS source FROM web_orders
+UNION ALL
+SELECT id, 'mobile' AS source FROM mobile_orders;</pre></div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="scalar">
+        <h2>Strings, dates &amp; casting</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>Strings</h3>
+            <div class="code"><pre>LENGTH(s)            CHAR_LENGTH(s)
+UPPER(s)  LOWER(s)   TRIM(s)  LTRIM(s)  RTRIM(s)
+SUBSTRING(s FROM 2 FOR 5)     SUBSTR(s, 2, 5)
+REPLACE(s, 'a', 'b')          POSITION('x' IN s)
+LEFT(s, 3)  RIGHT(s, 3)       LPAD(s, 5, '0')
+SPLIT_PART(s, ',', 2)         -- Postgres
+
+'a' || 'b'           -- ANSI, Postgres, SQLite, Oracle
+CONCAT('a', 'b')     -- everywhere
+'a' + 'b'            -- SQL Server</pre></div>
+            <div class="note note--warn">
+              Escape a literal quote by doubling it: <code>'O''Brien'</code>.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Dates &amp; times</h3>
+            <div class="code"><pre>CURRENT_DATE   CURRENT_TIMESTAMP        -- ANSI
+NOW()          -- Postgres, MySQL
+GETDATE()      -- SQL Server
+
+DATE_TRUNC('month', ts)                -- Postgres, Snowflake, BigQuery
+EXTRACT(YEAR FROM ts)  EXTRACT(DOW FROM ts)
+ts + INTERVAL '7 days'                 -- Postgres
+DATEADD(day, 7, ts)                    -- SQL Server
+DATE_ADD(ts, INTERVAL 7 DAY)           -- MySQL
+AGE(a, b)  /  DATEDIFF(day, a, b)      -- differences</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Half-open date ranges</h3>
+            <div class="code"><pre>-- BETWEEN on a timestamp silently drops most of the last day,
+-- because '2026-01-31' means midnight at its start.
+WHERE ts BETWEEN '2026-01-01' AND '2026-01-31'   -- misses 00:00:01+
+
+-- Use a half-open interval instead:
+WHERE ts &gt;= DATE '2026-01-01'
+  AND ts &lt;  DATE '2026-02-01'</pre></div>
+            <div class="note note--ok">
+              Half-open ranges also tile cleanly: consecutive months never overlap and
+              never leave a gap.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Casting</h3>
+            <div class="code"><pre>CAST(x AS INTEGER)       -- ANSI, portable
+x::numeric               -- Postgres shorthand
+TRY_CAST(x AS INT)       -- SQL Server: NULL instead of an error
+SAFE_CAST(x AS INT64)    -- BigQuery
+
+-- Integer division truncates in most engines:
+SELECT 7 / 2;            -- 3
+SELECT 7 * 1.0 / 2;      -- 3.5
+SELECT CAST(7 AS numeric) / 2;</pre></div>
+            <div class="note note--warn">
+              Use <code>NUMERIC</code>/<code>DECIMAL</code> for money. Binary
+              <code>FLOAT</code> cannot represent 0.1 exactly and the error accumulates
+              across a <code>SUM</code>.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="dml">
+        <h2>Inserting, updating, deleting</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>INSERT</h3>
+            <div class="code"><pre>INSERT INTO users (email, name) VALUES
+  ('a@example.com', 'Ada'),
+  ('b@example.com', 'Blaise');
+
+-- From a query
+INSERT INTO archive (id, total)
+SELECT id, total FROM orders WHERE created_at &lt; DATE '2025-01-01';
+
+-- Get the generated keys back
+INSERT INTO users (email) VALUES ('c@example.com') RETURNING id;</pre></div>
+            <div class="note">
+              Name the columns explicitly. Positional inserts break the moment someone adds
+              a column.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>UPDATE &amp; DELETE</h3>
+            <div class="code"><pre>UPDATE users SET name = 'Ada L.', updated_at = NOW()
+WHERE id = 42;
+
+-- Update from another table (Postgres)
+UPDATE orders o
+SET    country = u.country
+FROM   users u
+WHERE  u.id = o.user_id;
+
+DELETE FROM sessions WHERE expires_at &lt; NOW();
+TRUNCATE TABLE staging;     -- all rows, no WHERE, minimal logging</pre></div>
+            <div class="note note--warn">
+              <strong>Run the <code>WHERE</code> as a <code>SELECT</code> first.</strong>
+              Check the row count, then wrap the write in a transaction so a surprise can
+              be rolled back.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Upsert</h3>
+            <div class="code"><pre>-- Postgres, SQLite
+INSERT INTO users (email, name) VALUES ('a@example.com', 'Ada')
+ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name;
+
+ON CONFLICT (email) DO NOTHING;
+
+-- MySQL
+INSERT INTO users (email, name) VALUES ('a@example.com', 'Ada')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- ANSI / SQL Server / Snowflake
+MERGE INTO users AS t USING staged AS s ON t.email = s.email
+WHEN MATCHED     THEN UPDATE SET name = s.name
+WHEN NOT MATCHED THEN INSERT (email, name) VALUES (s.email, s.name);</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Transactions</h3>
+            <div class="code"><pre>BEGIN;
+  UPDATE accounts SET balance = balance - 100 WHERE id = 1;
+  UPDATE accounts SET balance = balance + 100 WHERE id = 2;
+COMMIT;        -- or ROLLBACK;
+
+SAVEPOINT sp1;  ROLLBACK TO sp1;</pre></div>
+            <div class="note">
+              DDL is transactional in Postgres, so a migration can be rolled back.
+              MySQL and Oracle commit implicitly on DDL &mdash; there is nothing to undo.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="ddl">
+        <h2>Tables, constraints &amp; views</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>CREATE TABLE</h3>
+            <div class="code"><pre>CREATE TABLE orders (
+  id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id     BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  total       NUMERIC(12,2) NOT NULL CHECK (total &gt;= 0),
+  status      TEXT        NOT NULL DEFAULT 'pending',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, created_at)
+);</pre></div>
+            <div class="note">
+              Auto-increment differs: <code>SERIAL</code>/<code>IDENTITY</code> (Postgres),
+              <code>AUTO_INCREMENT</code> (MySQL), <code>IDENTITY(1,1)</code> (SQL Server),
+              <code>INTEGER PRIMARY KEY</code> (SQLite).
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Constraints</h3>
+            <div class="code"><pre>PRIMARY KEY   unique + NOT NULL, one per table
+FOREIGN KEY   must match a row in the referenced table
+UNIQUE        no duplicates (NULLs usually exempt)
+NOT NULL      value required
+CHECK         arbitrary row-level predicate
+DEFAULT       value used when the column is omitted
+
+ON DELETE CASCADE | SET NULL | RESTRICT | NO ACTION</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>ALTER &amp; DROP</h3>
+            <div class="code"><pre>ALTER TABLE orders ADD COLUMN notes TEXT;
+ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'new';
+ALTER TABLE orders DROP COLUMN notes;
+ALTER TABLE orders RENAME TO customer_orders;
+
+DROP TABLE IF EXISTS staging;
+CREATE TABLE tmp AS SELECT * FROM orders WHERE 1 = 0;  -- structure only</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Views</h3>
+            <div class="code"><pre>CREATE VIEW active_users AS
+SELECT * FROM users WHERE deleted_at IS NULL;
+
+CREATE OR REPLACE VIEW ...
+DROP VIEW IF EXISTS active_users;
+
+-- Materialised: stored, must be refreshed
+CREATE MATERIALIZED VIEW daily_totals AS
+SELECT DATE_TRUNC('day', created_at) AS day, SUM(total) FROM orders
+GROUP BY 1;
+REFRESH MATERIALIZED VIEW daily_totals;</pre></div>
+            <div class="note">
+              A plain view is a stored query with no data of its own &mdash; it costs what
+              the underlying query costs, every time.
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="perf">
+        <h2>Performance</h2>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>Read the plan first</h3>
+            <div class="code"><pre>EXPLAIN ANALYZE SELECT ...;     -- Postgres: estimates + real timings
+EXPLAIN SELECT ...;             -- MySQL, SQLite
+SET SHOWPLAN_ALL ON;            -- SQL Server</pre></div>
+            <div class="note">
+              Look for a sequential scan on a large table, a row-count estimate far from
+              actual, and the step where time is actually spent. Optimise that step, not
+              the query you assume is slow.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Indexes</h3>
+            <div class="code"><pre>CREATE INDEX idx_orders_user ON orders (user_id);
+CREATE INDEX idx_orders_user_date ON orders (user_id, created_at);
+CREATE UNIQUE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_active ON orders (user_id) WHERE status = 'active';</pre></div>
+            <div class="note">
+              A composite index serves any <em>prefix</em> of its columns:
+              <code>(user_id, created_at)</code> helps a lookup on <code>user_id</code>
+              alone, but not on <code>created_at</code> alone. Indexes cost write speed and
+              storage, so add them for real queries, not on principle.
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Keep predicates sargable</h3>
+            <div class="code"><pre>-- Wrapping the column in a function hides the index:
+WHERE YEAR(created_at) = 2026
+WHERE UPPER(email) = 'A@EXAMPLE.COM'
+
+-- Rewrite so the bare column faces the operator:
+WHERE created_at &gt;= DATE '2026-01-01'
+  AND created_at &lt;  DATE '2027-01-01'
+WHERE email = LOWER('A@example.com')   -- with a lowercase column
+
+-- Or index the expression itself:
+CREATE INDEX idx_users_email_lower ON users (LOWER(email));</pre></div>
+          </div>
+
+          <div class="card">
+            <h3>Common wins</h3>
+            <ul>
+              <li>Select the columns you need; <code>SELECT *</code> blocks index-only scans.</li>
+              <li>Filter before you join, so fewer rows reach the join.</li>
+              <li><code>EXISTS</code> over <code>IN</code> for large subqueries.</li>
+              <li><code>UNION ALL</code> over <code>UNION</code> unless you truly need the dedup.</li>
+              <li>Avoid <code>DISTINCT</code> used to paper over a fan-out &mdash; fix the join grain.</li>
+              <li>Keep statistics fresh (<code>ANALYZE</code>); bad estimates give bad plans.</li>
+              <li>Batch large writes; one huge transaction blocks and bloats.</li>
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- =============================================================== -->
+      <section class="section" id="dialects">
+        <h2>Dialect differences</h2>
+
+        <div class="cards">
+          <div class="card card--wide">
+            <h3>The ones that break a ported query</h3>
+            <div class="tbl-scroll">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>Task</th><th>PostgreSQL</th><th>MySQL</th>
+                    <th>SQL Server</th><th>SQLite</th><th>BigQuery</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Limit rows</td><td><code>LIMIT n</code></td><td><code>LIMIT n</code></td>
+                    <td><code>TOP n</code> / <code>FETCH</code></td><td><code>LIMIT n</code></td><td><code>LIMIT n</code></td>
+                  </tr>
+                  <tr>
+                    <td>Concatenate</td><td><code>||</code></td><td><code>CONCAT()</code></td>
+                    <td><code>+</code></td><td><code>||</code></td><td><code>CONCAT()</code></td>
+                  </tr>
+                  <tr>
+                    <td>Now</td><td><code>NOW()</code></td><td><code>NOW()</code></td>
+                    <td><code>GETDATE()</code></td><td><code>datetime('now')</code></td><td><code>CURRENT_TIMESTAMP()</code></td>
+                  </tr>
+                  <tr>
+                    <td>NULL default</td><td><code>COALESCE</code></td><td><code>IFNULL</code></td>
+                    <td><code>ISNULL</code></td><td><code>IFNULL</code></td><td><code>IFNULL</code></td>
+                  </tr>
+                  <tr>
+                    <td>Cast shorthand</td><td><code>x::int</code></td><td><code>CAST</code></td>
+                    <td><code>CAST</code></td><td><code>CAST</code></td><td><code>SAFE_CAST</code></td>
+                  </tr>
+                  <tr>
+                    <td>String rollup</td><td><code>STRING_AGG</code></td><td><code>GROUP_CONCAT</code></td>
+                    <td><code>STRING_AGG</code></td><td><code>GROUP_CONCAT</code></td><td><code>STRING_AGG</code></td>
+                  </tr>
+                  <tr>
+                    <td>Upsert</td><td><code>ON CONFLICT</code></td><td><code>ON DUPLICATE KEY</code></td>
+                    <td><code>MERGE</code></td><td><code>ON CONFLICT</code></td><td><code>MERGE</code></td>
+                  </tr>
+                  <tr>
+                    <td>Identifier quote</td><td><code>"col"</code></td><td><code>`col`</code></td>
+                    <td><code>[col]</code></td><td><code>"col"</code></td><td><code>`col`</code></td>
+                  </tr>
+                  <tr>
+                    <td>Case sensitivity</td><td>Folds to lower</td><td>Depends on collation</td>
+                    <td>Collation</td><td>Insensitive for ASCII</td><td>Sensitive</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="note">
+              Single quotes are for string literals in every dialect. Double quotes mean
+              <em>identifier</em> in standard SQL &mdash; <code>WHERE name = "Ada"</code> is a
+              column comparison in Postgres, not a string one.
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  Part of <a href="../">Data Science Guide</a> &mdash;
+  <a href="https://github.com/jshiriyev/data-science-guide">source on GitHub</a>.
+</footer>
+
+<script src="../assets/js/sheet.js"></script>
+</body>
+</html>

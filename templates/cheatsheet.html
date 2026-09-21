@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!--
+  Starting point for a new cheat sheet.
+
+  1. Copy this file into a subject folder and rename it, e.g.
+         cp templates/cheatsheet.html python-programming/pandas.html
+     The ../assets/ paths below assume exactly that depth (one level down).
+
+  2. Edit <title> and <meta name="description"> -- the landing page is generated
+     from those two tags, so nothing else needs updating by hand. Keep the title
+     in the form "Topic — Data Science Guide".
+
+  3. Write sections. Each <section class="section" id="..."> with an <h2> gets a
+     table-of-contents entry and scrollspy automatically; each .card becomes a
+     unit for the search filter. Code blocks get a copy button.
+
+  4. Regenerate the index and preview:
+         python tools/build_catalog.py
+         python -m http.server 8000     # then open http://localhost:8000
+
+  Inside a code block, write the characters < > & as &lt; &gt; &amp; entities.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TOPIC — Data Science Guide</title>
+<meta name="description" content="One sentence describing what this sheet covers.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='14'>&#128202;</text></svg>">
+<link rel="stylesheet" href="../assets/css/base.css">
+<link rel="stylesheet" href="../assets/css/sheet.css">
+<script src="../assets/js/theme.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar__home" href="../">Data Science Guide</a>
+  <span class="topbar__crumb">/ SUBJECT / TOPIC</span>
+  <span class="topbar__spacer"></span>
+  <button class="btn" type="button" data-theme-toggle>Theme</button>
+  <button class="btn" type="button" onclick="window.print()">Print</button>
+</header>
+
+<main class="wrap">
+
+  <div class="intro">
+    <h1>TOPIC</h1>
+    <p>A short paragraph on what this sheet covers and who it is for.</p>
+    <div class="meta">
+      <span class="tag">SUBJECT</span>
+      <span class="tag">Version or scope note</span>
+    </div>
+  </div>
+
+  <div class="sheet">
+
+    <nav class="toc" aria-label="Sections">
+      <p class="toc__label">Sections</p>
+      <div class="toc__list" data-toc></div>
+    </nav>
+
+    <div>
+
+      <div class="search no-print">
+        <input type="search" data-search aria-label="Filter cheat sheet blocks"
+               placeholder="Filter blocks (press /)">
+        <div class="search__count" data-search-count aria-live="polite"></div>
+      </div>
+
+      <p class="empty is-hidden" data-empty>Nothing matches that filter.</p>
+
+      <section class="section" id="first-section">
+        <h2>First section</h2>
+        <p class="section__note">Optional sentence introducing the section.</p>
+
+        <div class="cards">
+
+          <div class="card">
+            <h3>A code example</h3>
+            <div class="code"><pre>example_code(here)</pre></div>
+            <div class="note">Optional aside. Also: .note--warn and .note--ok.</div>
+          </div>
+
+          <div class="card">
+            <h3>A list of points</h3>
+            <ul>
+              <li>Point one.</li>
+              <li>Point two.</li>
+            </ul>
+          </div>
+
+          <div class="card card--wide">
+            <h3>A full-width block</h3>
+            <div class="tbl-scroll">
+              <table class="tbl">
+                <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+                <tbody><tr><td><code>x</code></td><td>What it does</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  Part of <a href="../">Data Science Guide</a> &mdash;
+  <a href="https://github.com/jshiriyev/data-science-guide">source on GitHub</a>.
+</footer>
+
+<script src="../assets/js/sheet.js"></script>
+</body>
+</html>
