@@ -7,20 +7,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A static site of data-science cheat sheets, published to GitHub Pages at
 <https://jshiriyev.github.io/data-science-guide/>. One sheet is added per week.
 
-No framework, no package manager, no dependencies. Plain HTML/CSS/JS, plus two
-Python 3 scripts that need only the standard library.
+No framework, no package manager, no dependencies. Plain HTML/CSS/JS, plus three
+Python 3 scripts in `tools/` that need only the standard library.
 
 ## Commands
 
 ```bash
+python tools/adopt_sheet.py             # give dropped-in sheets their document scaffolding
+python tools/adopt_sheet.py --check     # exit 1 if any sheet still needs it
 python tools/build_catalog.py           # regenerate data/catalog.js from the sheets on disk
 python tools/build_catalog.py --check   # exit 1 if catalog.js is stale (no write)
-python tools/check_site.py              # links, metadata, duplicate ids, unescaped markup
+python tools/check_site.py              # links, structure, catalog consistency
 python -m http.server 8000              # preview at http://localhost:8000
 ```
 
-`check_site.py` is the closest thing to a test suite here; run it after editing
-any `.html`. It exits non-zero on failure and CI runs it before deploying.
+`check_site.py` is the closest thing to a test suite here; run it after touching
+any `.html`. CI runs adopt, build and check in that order before deploying.
 
 ## Architecture
 
@@ -56,26 +58,48 @@ the explicit toggle. `assets/js/theme.js` must stay a synchronous `<head>`
 script — it applies the saved theme before first paint, and deferring it brings
 back the flash of the wrong palette.
 
-## Conventions for a new sheet
+## Sheets arrive from outside
 
-Copy `templates/cheatsheet.html` into the subject folder. It assumes exactly one
-level of nesting, so its `../assets/...` paths only work from a subject folder.
+**The owner writes cheat sheets elsewhere and drops the `.html` file into a
+subject folder.** They are self-contained pages with their own CSS, their own
+title and their own behaviour — they do not use `assets/` and are not expected
+to. Do not rewrite a sheet to match house style, and do not add conventions to
+the tooling that an externally authored file would fail.
 
-- Title must read `Topic — Data Science Guide` (em dash); `build_catalog.py`
-  splits on it and `check_site.py` enforces it.
-- `<meta name="description">` is required — it becomes the blurb on the landing
-  page.
-- Section `id`s must be unique within the page or the table of contents breaks.
-- Inside `<pre>`, write `<` `>` `&` as entities. `check_site.py` catches misses.
+Such files usually arrive as a *fragment*: styles and markup with no
+`<!DOCTYPE>`, no `<html>`, no `<head>`, no charset and no viewport. That means
+quirks-mode rendering, and mojibake for any non-ASCII character as soon as the
+server does not supply a charset. `tools/adopt_sheet.py` wraps the fragment,
+splitting it at the last head-legal element (`<title>`, `<meta>`, `<link>`,
+`<style>`, comments) and putting everything after it in `<body>`. It is
+idempotent and preserves the file's original line endings — an earlier version
+did not, and rewrote every line of a 163 KB file.
+
+`check_site.py` therefore splits its output: **failures** are things that break
+a published page (dead local link, missing doctype/charset/viewport, no title,
+duplicate `.section` ids, catalog out of sync) and block the deploy;
+**warnings** are cosmetic (no description, unescaped `<`/`>` in a `<pre>`) and
+do not. Keep that split — turning a warning into a failure would block the
+owner's weekly push over something that renders fine.
+
+### If you do write a sheet against the shared styles
+
+Start from `templates/cheatsheet.html`. It assumes exactly one level of nesting,
+so its `../assets/...` paths only work from a subject folder. Section `id`s must
+be unique or the table of contents breaks, and inside `<pre>` write `<` `>` `&`
+as entities.
 
 ## Deployment
 
-`.github/workflows/pages.yml` runs on every push to `main`: rebuild the catalog,
-run the checker, rsync everything except `.git`, `.github`, `tools`,
-`templates`, `README.md` and `CLAUDE.md` into `_site`, then upload and deploy.
+`.github/workflows/pages.yml` runs on every push to `main`: adopt any fragment
+sheets, rebuild the catalog, run the checker, rsync everything except `.git`,
+`.github`, `tools`, `templates`, `README.md` and `CLAUDE.md` into `_site`, then
+upload and deploy. Adopt and build both run in CI so that pushing a raw
+drop-in publishes correctly even when the local steps were skipped.
 
-`actions/configure-pages` runs with `enablement: true`, so the workflow turns
-Pages on itself rather than depending on a manual setting.
+Pages source is set to "GitHub Actions" in repository settings. The workflow
+also passes `enablement: true`, but the workflow token could not create the
+Pages site on a repository that had never had one — it took a manual enable.
 
 Pages deploys from the workflow artifact, not from a branch, so `.nojekyll` is
 not strictly load-bearing today — it is kept so that switching to a branch-based
@@ -85,5 +109,8 @@ deploy later does not silently start stripping files.
 
 - `templates/cheatsheet.html` is excluded from the published site and, because
   it does not sit in a subject folder, is not picked up by the catalog either.
+- `data-analytics-tools/` holds two SQL sheets on purpose: `SQL_Cheat_Sheet.html`
+  (the owner's interactive review console) and `sql-quick-reference.html` (a
+  lookup reference built on the shared styles).
 - Writing these HTML files with shell heredocs is painful — the markup collides
   with shell quoting. Use the Write tool.

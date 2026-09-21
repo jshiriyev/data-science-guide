@@ -27,9 +27,14 @@ window.DSG_CATALOG = {
       "blurb": "SQL, visualization libraries, notebooks, and the rest of the toolbox.",
       "sheets": [
         {
-          "title": "SQL",
+          "title": "SQL in 40 Topics",
+          "blurb": "Forty SQL topics with live labs, a pattern library, common bugs and a readiness check.",
+          "href": "data-analytics-tools/SQL_Cheat_Sheet.html"
+        },
+        {
+          "title": "SQL Quick Reference",
           "blurb": "Query evaluation order, joins, aggregation, window functions, CTEs, DML/DDL, and the dialect differences that bite.",
-          "href": "data-analytics-tools/sql.html"
+          "href": "data-analytics-tools/sql-quick-reference.html"
         }
       ]
     },

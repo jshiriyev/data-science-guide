@@ -29,6 +29,12 @@ jobs:
         with:
           python-version: '3.x'
 
+      # Sheets are authored elsewhere and dropped in as fragments, so give them
+      # their document scaffolding here too. Pushing a raw file then publishes
+      # correctly whether or not the local step was run.
+      - name: Normalise any newly added sheets
+        run: python tools/adopt_sheet.py
+
       - name: Rebuild the catalog from the sheets on disk
         run: python tools/build_catalog.py
 

@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Forty SQL topics with live labs, a pattern library, common bugs and a readiness check.">
+<title>SQL in 40 Topics</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@600;700&display=swap">
+<style>
+:root{
+  --bg:#F2F4EF; --surface:#FFFFFF; --surface-2:#E8EDE3; --surface-3:#FAFBF8;
+  --ink:#141C18; --ink-2:#53625A; --ink-3:#7B8A81;
+  --line:#D6DDD1; --line-2:#C0C9BA;
+  --accent:#0E6F62; --accent-2:#0A5348; --accent-soft:#D6E9E3;
+  --clay:#A9511F; --clay-soft:#F4E1D3;
+  --ochre:#856310; --ochre-soft:#EFE6C6;
+  --violet:#5B4B8A; --violet-soft:#E4E0EF;
+  --code-bg:#0F1D1A; --code-surface:#162723; --code-ink:#D9E6E0; --code-dim:#7D998F;
+  --code-kw:#7FD1BE; --code-str:#E8B98A; --code-num:#C9B6EE; --code-fn:#9CC7F0; --code-com:#5E7A72;
+  --shadow:0 1px 2px rgba(20,28,24,.06), 0 8px 24px -16px rgba(20,28,24,.35);
+  --radius:10px; --on-accent:#FFFFFF;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1411; --surface:#151D19; --surface-2:#1D2823; --surface-3:#111815;
+    --ink:#E6EDE8; --ink-2:#A0B0A6; --ink-3:#7E8F85;
+    --line:#2A3831; --line-2:#3A4B42;
+    --accent:#54C2AC; --accent-2:#7FD9C6; --accent-soft:#12312A;
+    --clay:#E0925F; --clay-soft:#332114; --on-accent:#06211C;
+    --ochre:#D7B65C; --ochre-soft:#2C2614;
+    --violet:#A99BD8; --violet-soft:#221F33;
+    --code-bg:#0A100E; --code-surface:#121C19;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1411; --surface:#151D19; --surface-2:#1D2823; --surface-3:#111815;
+  --ink:#E6EDE8; --ink-2:#A0B0A6; --ink-3:#7E8F85;
+  --line:#2A3831; --line-2:#3A4B42;
+  --accent:#54C2AC; --accent-2:#7FD9C6; --accent-soft:#12312A;
+  --clay:#E0925F; --clay-soft:#332114; --on-accent:#06211C;
+  --ochre:#D7B65C; --ochre-soft:#2C2614;
+  --violet:#A99BD8; --violet-soft:#221F33;
+  --code-bg:#0A100E; --code-surface:#121C19;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -18px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;
+     -webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:600;text-wrap:balance;margin:0}
+a{color:var(--accent);text-underline-offset:2px}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1280px;margin:0 auto;padding-block:10px;padding-inline:20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand b{font-family:var(--serif);font-size:19px;letter-spacing:-.01em}
+.brand span{font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.08em}
+.search{position:relative;flex:1 1 260px;max-width:420px}
+.search input{width:100%;padding:8px 34px 8px 32px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);
+  color:var(--ink);font-family:var(--mono);font-size:13px}
+.search input::placeholder{color:var(--ink-3)}
+.search .mag{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-3);font-size:13px;pointer-events:none}
+.search kbd{position:absolute;right:9px;top:50%;transform:translateY(-50%)}
+kbd{font-family:var(--mono);font-size:10px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;
+  padding:1px 5px;color:var(--ink-3);background:var(--surface-2)}
+.iconbtn{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:6px 10px;font-size:12px;
+  font-family:var(--mono);color:var(--ink-2);display:inline-flex;gap:6px;align-items:center}
+.iconbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- shell ---------- */
+.shell{max-width:1280px;margin:0 auto;padding-inline:20px;padding-block:22px 64px;
+  display:grid;grid-template-columns:250px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:920px){.shell{grid-template-columns:minmax(0,1fr);gap:20px}}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 68px);display:flex;flex-direction:column;gap:16px}
+@media (max-width:920px){.rail{position:static}}
+.railbox{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px}
+.railbox h4{font-size:12px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:500;margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line-2);background:transparent;border-radius:999px;padding:3px 10px;font-size:12px;
+  font-family:var(--mono);color:var(--ink-2);transition:.12s}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ringwrap{display:flex;align-items:center;gap:12px}
+.ring{width:64px;height:64px;flex:none}
+.ring circle{fill:none;stroke-width:7}
+.ring .bg{stroke:var(--surface-2)}
+.ring .fg{stroke:var(--accent);stroke-linecap:round;transition:stroke-dasharray .4s ease}
+.ringnum{font-family:var(--mono);font-size:17px;font-weight:600;fill:var(--ink)}
+.ringlab{font-size:12px;color:var(--ink-2);line-height:1.35}
+.ringlab b{display:block;font-family:var(--mono);font-size:13px;color:var(--ink)}
+.navlist{display:flex;flex-direction:column;gap:2px}
+.navlist a{display:flex;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:6px;text-decoration:none;
+  color:var(--ink-2);font-size:13px}
+.navlist a:hover{background:var(--surface-2);color:var(--ink)}
+.navlist a i{font-family:var(--mono);font-style:normal;font-size:11px;color:var(--ink-3)}
+
+/* ---------- generic section ---------- */
+section{scroll-margin-top:84px}
+.sechead{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin:34px 0 14px}
+.sechead:first-child{margin-top:0}
+.sechead h2{font-size:22px;letter-spacing:-.015em}
+.sechead p{margin:0;color:var(--ink-2);font-size:13.5px;max-width:62ch}
+.rule{height:1px;background:var(--line);flex:1 1 40px;margin-bottom:7px;min-width:20px}
+
+/* ---------- hero / pipeline ---------- */
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.hero p.lede{margin:8px 0 0;color:var(--ink-2);max-width:68ch;font-size:14.5px}
+.statrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:6px 11px;background:var(--surface-3);font-size:12.5px;color:var(--ink-2)}
+.stat b{font-family:var(--mono);color:var(--ink);font-size:14px;margin-right:5px}
+.pipe{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.stage{flex:1 1 104px;min-width:96px;border:1px solid var(--line-2);background:var(--surface-3);border-radius:8px;
+  padding:8px 9px;text-align:left;transition:.14s}
+.stage:hover{border-color:var(--accent)}
+.stage[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.stage[aria-pressed="true"] em{opacity:.72}
+.stage em{display:block;font-style:normal;font-family:var(--mono);font-size:10px;color:var(--ink-3);letter-spacing:.08em}
+.stage span{font-family:var(--mono);font-size:12.5px;font-weight:500}
+.stagenote{margin-top:12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;
+  padding:10px 14px;font-size:13.5px;color:var(--ink)}
+.stagenote code{font-family:var(--mono);font-size:12.5px}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.count{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin-right:auto}
+
+/* ---------- topic cards ---------- */
+.topics{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.card.open{border-color:var(--line-2);box-shadow:var(--shadow)}
+.card > .head{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:start;width:100%;
+  background:none;border:0;padding:13px 15px;text-align:left}
+.card > .head:hover .title{color:var(--accent)}
+.num{font-family:var(--mono);font-size:12px;color:var(--ink-3);border:1px solid var(--line);border-radius:6px;
+  padding:3px 0;text-align:center;background:var(--surface-3)}
+.card.done .num{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.title{font-family:var(--serif);font-size:16.5px;font-weight:600;letter-spacing:-.01em;display:block}
+.sub{color:var(--ink-2);font-size:13px;margin-top:2px;display:block}
+.meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:2px 7px;border-radius:5px;border:1px solid;white-space:nowrap}
+.b-p1{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.b-p2{color:var(--ochre);border-color:var(--ochre);background:var(--ochre-soft)}
+.b-p3{color:var(--violet);border-color:var(--violet);background:var(--violet-soft)}
+.b-present{color:var(--ink-2);border-color:var(--line-2);background:var(--surface-2)}
+.b-extend{color:var(--ink-2);border-color:var(--line-2);background:transparent}
+.b-add{color:var(--clay);border-color:var(--clay);background:var(--clay-soft)}
+.caret{font-family:var(--mono);color:var(--ink-3);font-size:12px;transition:transform .18s}
+.card.open .caret{transform:rotate(90deg)}
+.body{border-top:1px solid var(--line);padding:4px 15px 15px;display:grid;gap:14px}
+@media (min-width:760px){.body.two{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start}}
+.block h5{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+  font-weight:500;margin:14px 0 7px}
+ul.points{margin:0;padding-left:0;list-style:none;display:grid;gap:6px}
+ul.points li{padding-left:16px;position:relative;font-size:13.8px;color:var(--ink)}
+ul.points li::before{content:"";position:absolute;left:3px;top:.62em;width:5px;height:5px;border-radius:1px;background:var(--accent)}
+ul.points li code,.body p code,.trap code,.prompt code{font-family:var(--mono);font-size:12.3px;background:var(--surface-2);
+  padding:1px 4px;border-radius:4px}
+.trap{border-left:3px solid var(--clay);background:var(--clay-soft);border-radius:0 8px 8px 0;padding:8px 12px;font-size:13.3px}
+.trap + .trap{margin-top:6px}
+.trap b{color:var(--clay);font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;display:block}
+.prompt{background:var(--surface-3);border:1px solid var(--line);border-radius:8px;padding:11px 13px;font-size:13.6px}
+.prompt .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:3px}
+.prompt.mastery .tag{color:var(--ochre)}
+details.rev{margin-top:9px;border-top:1px dashed var(--line-2);padding-top:9px}
+details.rev > summary{cursor:pointer;font-family:var(--mono);font-size:12px;color:var(--accent);list-style:none}
+details.rev > summary::-webkit-details-marker{display:none}
+details.rev > summary::before{content:"▸ ";}
+details.rev[open] > summary::before{content:"▾ ";}
+details.rev .ans{margin-top:8px;font-size:13.4px;color:var(--ink-2)}
+.cardfoot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);
+  margin:2px -15px -15px;padding:10px 15px;background:var(--surface-3)}
+.scorelab{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.score{display:flex;gap:4px}
+.score button{width:26px;height:24px;border:1px solid var(--line-2);background:var(--surface);border-radius:5px;
+  font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+.score button:hover{border-color:var(--accent);color:var(--accent)}
+.score button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.lablink{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--accent);text-decoration:none;
+  border:1px dashed var(--accent);border-radius:6px;padding:3px 9px}
+.lablink:hover{background:var(--accent-soft)}
+.srcline{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:10px}
+
+/* ---------- code ---------- */
+.codewrap{position:relative;background:var(--code-bg);border-radius:9px;border:1px solid rgba(255,255,255,.07);overflow:hidden}
+.codewrap + .codewrap{margin-top:8px}
+.codebar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--code-surface);
+  border-bottom:1px solid rgba(255,255,255,.06)}
+.codebar span{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--code-dim)}
+.copy{margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.14);color:var(--code-dim);
+  border-radius:5px;padding:2px 8px;font-family:var(--mono);font-size:10.5px}
+.copy:hover{color:var(--code-ink);border-color:rgba(255,255,255,.35)}
+pre.code{margin:0;padding:11px 13px;overflow-x:auto;font-family:var(--mono);font-size:12.4px;line-height:1.62;
+  color:var(--code-ink);tab-size:2}
+.k{color:var(--code-kw);font-weight:500}.s{color:var(--code-str)}.n{color:var(--code-num)}
+.f{color:var(--code-fn)}.c{color:var(--code-com);font-style:italic}
+
+/* ---------- labs ---------- */
+.labs{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.tabs{display:flex;gap:2px;padding:8px 8px 0;background:var(--surface-2);flex-wrap:wrap}
+.tab{border:1px solid transparent;border-bottom:0;background:transparent;padding:7px 13px;border-radius:8px 8px 0 0;
+  font-family:var(--mono);font-size:12.5px;color:var(--ink-2)}
+.tab[aria-selected="true"]{background:var(--surface);border-color:var(--line);color:var(--accent)}
+.labpane{padding:16px}
+.labgrid{display:grid;gap:16px}
+@media (min-width:720px){.labgrid{grid-template-columns:minmax(200px,260px) minmax(0,1fr)}}
+.ctrl{display:grid;gap:12px;align-content:start}
+.ctrl label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+  display:block;margin-bottom:5px}
+.ctrl select,.ctrl input[type="text"]{width:100%;padding:7px 9px;border:1px solid var(--line-2);border-radius:7px;
+  background:var(--surface-3);color:var(--ink);font-family:var(--mono);font-size:12.5px}
+.ctrl input[type="range"]{width:100%;accent-color:var(--accent)}
+.labout{min-width:0}
+table.grid{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.3px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.grid th{text-align:left;font-weight:500;color:var(--ink-3);background:var(--surface-2);padding:6px 9px;
+  border-bottom:1px solid var(--line);white-space:nowrap;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+table.grid td{padding:5px 9px;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+table.grid tr:last-child td{border-bottom:0}
+table.grid td.null{color:var(--clay)}
+table.grid tr.inframe td{background:var(--accent-soft)}
+table.grid tr.cur td{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.note{font-size:12.8px;color:var(--ink-2);margin-top:10px}
+.note b{color:var(--ink)}
+.truth{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.tcell{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--surface-3)}
+.tcell em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink-3);display:block}
+.tcell b{font-family:var(--mono);font-size:15px}
+.v-true{color:var(--accent)}.v-false{color:var(--clay)}.v-null{color:var(--ochre)}
+.verdict{margin-top:10px;font-family:var(--mono);font-size:12.5px;padding:8px 11px;border-radius:8px;
+  background:var(--surface-2);border:1px solid var(--line)}
+
+/* ---------- patterns ---------- */
+.patgrid{display:grid;gap:12px}
+@media (min-width:860px){.patgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;display:flex;
+  flex-direction:column;gap:9px}
+.pat h4{font-size:15px}
+.pat .why{font-size:13px;color:var(--ink-2);margin:0}
+.pat .letter{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em}
+
+/* ---------- fixes ---------- */
+.fixgrid{display:grid;gap:9px}
+@media (min-width:860px){.fixgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fix{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:11px 13px}
+.fix .src{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase}
+.fix .bug{font-size:13.5px;margin:4px 0 0}
+.fix details{margin-top:8px}
+.fix summary{cursor:pointer;font-family:var(--mono);font-size:11.5px;color:var(--accent);list-style:none}
+.fix summary::-webkit-details-marker{display:none}
+.fix summary::before{content:"▸ show the fix"}
+.fix details[open] summary::before{content:"▾ the fix"}
+.fix summary span{display:none}
+.fix .fixtext{margin-top:7px;font-size:13.3px;color:var(--ink-2);border-left:3px solid var(--accent);padding-left:10px}
+
+/* ---------- roadmap ---------- */
+.phases{display:grid;gap:10px}
+@media (min-width:900px){.phases{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px}
+.phase .step{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em}
+.phase h4{font-size:15px;margin:3px 0 6px}
+.phase p{margin:0 0 9px;font-size:13px;color:var(--ink-2)}
+.tchips{display:flex;flex-wrap:wrap;gap:4px}
+.tchip{font-family:var(--mono);font-size:11px;border:1px solid var(--line-2);border-radius:5px;padding:1px 6px;
+  background:var(--surface-3);color:var(--ink-2);text-decoration:none}
+.tchip:hover{border-color:var(--accent);color:var(--accent)}
+.rolerow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.readygrid{display:grid;gap:8px}
+@media (min-width:760px){.readygrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ready{display:flex;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:13.3px}
+.ready em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--ink-3);min-width:118px}
+
+/* ---------- drill modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(10,16,14,.55);backdrop-filter:blur(3px);z-index:60;display:grid;
+  place-items:center;padding:20px}
+.modal{background:var(--surface);border:1px solid var(--line-2);border-radius:14px;max-width:620px;width:100%;
+  padding:20px;box-shadow:0 30px 70px -30px rgba(0,0,0,.6);max-height:85vh;overflow-y:auto}
+.modal h3{font-size:19px;margin-bottom:4px}
+.modal .qnum{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em}
+.modal .q{font-size:15px;margin:12px 0}
+.modalfoot{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.btn{background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:8px;padding:7px 14px;
+  font-family:var(--mono);font-size:12.5px}
+.btn:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn.ghost{background:transparent;color:var(--ink-2);border-color:var(--line-2)}
+.btn.ghost:hover{color:var(--accent);border-color:var(--accent);background:transparent}
+.empty{padding:28px;text-align:center;color:var(--ink-3);font-family:var(--mono);font-size:13px;
+  border:1px dashed var(--line-2);border-radius:var(--radius)}
+footer.foot{max-width:1280px;margin:0 auto;padding:22px 20px 40px;color:var(--ink-3);font-size:12.5px;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><a class="uplink" href="../">← Guide</a><b>SQL in 40 Topics</b><span>REVIEW CONSOLE</span></div>
+    <div class="search">
+      <span class="mag">⌕</span>
+      <input id="q" type="text" placeholder="search topics, syntax, pitfalls…" autocomplete="off" aria-label="Search topics">
+      <kbd>/</kbd>
+    </div>
+    <button class="iconbtn" id="drillBtn" type="button">⚡ Drill</button>
+    <button class="iconbtn" id="themeBtn" type="button" aria-label="Switch colour theme">◐ Theme</button>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="railbox">
+      <h4>Your progress</h4>
+      <div class="ringwrap">
+        <svg class="ring" viewBox="0 0 80 80" aria-hidden="true">
+          <circle class="bg" cx="40" cy="40" r="33"></circle>
+          <circle class="fg" id="ringFg" cx="40" cy="40" r="33" transform="rotate(-90 40 40)"
+                  stroke-dasharray="0 207"></circle>
+          <text id="ringTxt" class="ringnum" x="40" y="45" text-anchor="middle">0%</text>
+        </svg>
+        <div class="ringlab"><b id="scoreLine">0 / 120 points</b>Score each topic 0–3 as you review. Saved in this browser.</div>
+      </div>
+      <div class="chips" style="margin-top:12px">
+        <button class="chip" id="resetScores" type="button">reset scores</button>
+      </div>
+    </div>
+
+    <div class="railbox">
+      <h4>Filter</h4>
+      <div class="chips" data-group="p" style="margin-bottom:9px">
+        <button class="chip" data-f="P1" type="button" aria-pressed="false">P1 core</button>
+        <button class="chip" data-f="P2" type="button" aria-pressed="false">P2 depth</button>
+        <button class="chip" data-f="P3" type="button" aria-pressed="false">P3 specialist</button>
+      </div>
+      <div class="chips" data-group="c" style="margin-bottom:9px">
+        <button class="chip" data-f="Present" type="button" aria-pressed="false">Present</button>
+        <button class="chip" data-f="Extend" type="button" aria-pressed="false">Extend</button>
+        <button class="chip" data-f="Add" type="button" aria-pressed="false">Add</button>
+      </div>
+      <div class="chips" data-group="s">
+        <button class="chip" data-f="weak" type="button" aria-pressed="false">not yet a 3</button>
+      </div>
+    </div>
+
+    <div class="railbox">
+      <h4>Jump to</h4>
+      <nav class="navlist">
+        <a href="#engine">Query engine order <i>8</i></a>
+        <a href="#topics">The 40 topics <i>40</i></a>
+        <a href="#labs">Live labs <i>4</i></a>
+        <a href="#patterns">Pattern library <i>8</i></a>
+        <a href="#fixes">Bugs worth knowing <i>30</i></a>
+        <a href="#roadmap">Study order <i>5</i></a>
+        <a href="#ready">Readiness check <i>9</i></a>
+      </nav>
+    </div>
+  </aside>
+
+  <main>
+    <section id="engine">
+      <div class="hero">
+        <p class="eyebrow">Start here</p>
+        <h2 style="font-size:24px;letter-spacing:-.02em;margin-top:4px">Every SQL question is a question about grain, order and NULLs.</h2>
+        <p class="lede">Forty topics, each one compressed to what you must be able to say out loud, the syntax you must be able to
+          write from memory, the trap that catches people, and the practice prompt that proves it. Click a stage below to see what
+          the database does when — most "why doesn't this work" bugs live in this sequence.</p>
+        <div class="statrow" id="statRow"></div>
+        <div class="pipe" id="pipe"></div>
+        <div class="stagenote" id="stageNote"></div>
+      </div>
+    </section>
+
+    <section id="topics">
+      <div class="sechead">
+        <h2>The 40 topics</h2><div class="rule"></div>
+        <p>Click any topic to open its cheat sheet, pitfalls and practice prompt.</p>
+      </div>
+      <div class="toolbar">
+        <span class="count" id="count"></span>
+        <button class="iconbtn" id="expandAll" type="button">expand all</button>
+        <button class="iconbtn" id="collapseAll" type="button">collapse all</button>
+      </div>
+      <div class="topics" id="topicList"></div>
+      <div class="empty" id="empty" hidden>No topic matches that filter.</div>
+    </section>
+
+    <section id="labs">
+      <div class="sechead">
+        <h2>Live labs</h2><div class="rule"></div>
+        <p>The four behaviours that are faster to see than to read. Change the inputs and watch the result change.</p>
+      </div>
+      <div class="labs">
+        <div class="tabs" role="tablist" id="labTabs"></div>
+        <div class="labpane" id="labPane"></div>
+      </div>
+    </section>
+
+    <section id="patterns">
+      <div class="sechead">
+        <h2>Pattern library</h2><div class="rule"></div>
+        <p>Eight templates worth writing from memory. Portable SQL unless a comment says otherwise.</p>
+      </div>
+      <div class="patgrid" id="patList"></div>
+    </section>
+
+    <section id="fixes">
+      <div class="sechead">
+        <h2>Bugs worth knowing</h2><div class="rule"></div>
+        <p>Real defects found in the course material and its saved answers. Read the bug, decide the fix, then check.</p>
+      </div>
+      <div class="toolbar">
+        <span class="count" id="fixCount"></span>
+        <button class="iconbtn" id="revealFixes" type="button">reveal all fixes</button>
+      </div>
+      <div class="fixgrid" id="fixList"></div>
+    </section>
+
+    <section id="roadmap">
+      <div class="sechead">
+        <h2>Study order</h2><div class="rule"></div>
+        <p>Mastery is the stopping criterion, not a number of days. Pick a role to see what to deepen after the core.</p>
+      </div>
+      <div class="phases" id="phaseList"></div>
+      <div class="sechead" style="margin-top:26px">
+        <h2 style="font-size:18px">Role focus</h2><div class="rule"></div>
+      </div>
+      <div class="rolerow" id="roleRow"></div>
+      <div class="prompt" id="roleNote">Choose a role to filter the topic list to its emphasis, on top of the P1 core.</div>
+    </section>
+
+    <section id="ready">
+      <div class="sechead">
+        <h2>Readiness check</h2><div class="rule"></div>
+        <p>Score 0 unfamiliar · 1 can explain · 2 can solve with reference · 3 can solve alone and test the edges.</p>
+      </div>
+      <div class="readygrid" id="readyList"></div>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">
+  Built from <b>SQL_Study_Guide.md</b> — 40 topics, 8 patterns, 30 corrections. Scores live in this browser only.
+  Portable SQL unless a comment names a dialect; check row limiting, date arithmetic and upserts against your own engine.
+</footer>
+
+<script>
+const TOPICS = [
+{n:1,p:"P1",pf:"P1",c:"Extend",t:"Relational concepts, keys, and row grain",
+ sum:"Name what one row represents before you write anything else.",
+ src:"W1 pp. 6-21 · W4 pp. 3-9 · Deck 11-16 · HR diagrams",
+ tags:"schema table entity attribute primary key candidate foreign composite natural surrogate cardinality one-to-many grain",
+ keys:["Grain is the first question: an employee, a job-history episode, an order and an order line are four different grains even when they share an id.",
+  "Keys: primary, candidate, foreign, composite, natural, surrogate. A foreign key constrains a relationship; it does not promise that a parent has children, nor that the child key is unique.",
+  "Relationships are 1:1, 1:N or M:N. An M:N relationship always needs a bridge table.",
+  "SQL keeps duplicate rows unless you tell it not to. Duplicates in a result are information about your join, not noise to be DISTINCT-ed away.",
+  "You may join on columns that are not declared keys, but you then owe an explanation of what that match means."],
+ code:[{lab:"Prove the grain before you join",sql:`SELECT employee_id, COUNT(*) AS rows_per_employee
+FROM   job_history
+GROUP  BY employee_id
+HAVING COUNT(*) > 1;      -- any rows here, and the grain is NOT one row per employee`}],
+ traps:[["Fan-out by surprise","employees to job_history is one-to-many, so every aggregate over that join is per episode, not per person."],
+  ["Same name, different meaning","department_id on employees is the current department; on job_history it is the department during that episode."]],
+ practice:"Sketch the HR schema and explain why joining employees to job history can produce several rows per employee.",
+ approach:"employees is one row per person; job_history is one row per (employee, start_date) episode. The join key employee_id is unique on the left only, so an employee with three past jobs yields three rows. Count first: SELECT employee_id, COUNT(*) FROM job_history GROUP BY employee_id.",
+ mastery:"Predict the output row count before writing the join, and name the key of the result."},
+
+{n:2,p:"P1",pf:"P1",c:"Present",t:"SELECT and logical query processing",
+ sum:"The clause order you write is not the order the database reasons in.",
+ src:"W1 pp. 21-40 · Deck 4-5, 18-19",
+ tags:"select projection alias distinct order by limit fetch top logical order processing deterministic",
+ keys:["Logical order: FROM/JOIN, WHERE, GROUP BY, HAVING, window functions, SELECT and DISTINCT, ORDER BY, then row limiting.",
+  "That order explains the two classic errors: an aggregate cannot be filtered in WHERE, and a window result cannot be filtered at the same query level.",
+  "Logical order is not physical execution. The optimizer may do the work in any order that yields the same answer.",
+  "A table has no natural order. Neither a CTE's ORDER BY nor a previously saved result guarantees the final order.",
+  "DISTINCT applies to the whole selected row, not to the column it sits next to."],
+ code:[{lab:"Deterministic top five",sql:`SELECT employee_id, first_name, last_name, salary
+FROM   employees
+WHERE  salary IS NOT NULL
+ORDER  BY salary DESC, employee_id       -- unique tie-breaker = repeatable answer
+FETCH  FIRST 5 ROWS ONLY;                -- LIMIT 5 | TOP 5 in other engines`}],
+ traps:[["A plain limit is not a top-N","With ties at the boundary, LIMIT 5 picks an arbitrary five. Add a unique tie-breaker, or rank if every tied row must appear."],
+  ["Alias visibility varies","Some engines let ORDER BY see a SELECT alias, few let WHERE see it. Repeat the expression when in doubt."]],
+ practice:"Return the five highest-paid employees with deterministic ordering; explain why a plain limit is insufficient.",
+ approach:"Order by salary DESC then a unique column such as employee_id, then limit. Without the tie-breaker, two employees on the same salary can swap places between runs, and a sixth employee tied with the fifth is silently dropped. If every tied employee must appear, rank instead of limit.",
+ mastery:"Explain why filtering an aggregate in WHERE fails, and why DISTINCT applies to the selected row as a whole."},
+
+{n:3,p:"P1",pf:"P1",c:"Present",t:"Filtering and Boolean logic",
+ sum:"Translate the words of the question into predicates, parentheses included.",
+ src:"W1 pp. 41-64 · W1 case study/homework · Project problems 2-5",
+ tags:"where and or not in between like precedence parentheses predicate comparison filter",
+ keys:["AND binds tighter than OR. Write the parentheses even when they are redundant.",
+  "BETWEEN includes both endpoints. For timestamps that is usually wrong; use a half-open range instead.",
+  "IN is a membership test, LIKE is a pattern test, and neither substitutes for the other.",
+  "Filtering a column does not project it. If the question asks about salary, put salary in the SELECT list too.",
+  "Text comparison is case sensitive or not depending on engine and collation. Do not assume."],
+ code:[{lab:"First OR last name, one year, minus two departments",sql:`SELECT employee_id, first_name, last_name, hire_date, department_id
+FROM   employees
+WHERE  (first_name LIKE 'S%' OR last_name LIKE 'S%')   -- the parentheses are the point
+  AND  hire_date >= DATE '2005-01-01'
+  AND  hire_date <  DATE '2006-01-01'
+  AND  (department_id NOT IN (50, 80) OR department_id IS NULL);`}],
+ traps:[["A OR B AND C","reads as A OR (B AND C). A row satisfying only A still passes, which is rarely what the prompt meant."],
+  ["NOT IN silently drops NULLs","department_id NOT IN (50,80) is UNKNOWN when the column is NULL, so those employees vanish unless you say what should happen to them."],
+  ["After 2005","means after 1 January, or after the whole year? Ask, then encode the answer in the boundary."]],
+ practice:"Return employees whose first or last name starts with S, hired in a given year, excluding two departments.",
+ approach:"Parenthesise the OR pair, bound the year with a half-open date range rather than a text pattern, and decide explicitly whether employees with no department belong in the result. State that decision in a comment.",
+ mastery:"Construct a counterexample showing the difference between A OR B AND C and (A OR B) AND C."},
+
+{n:4,p:"P1",pf:"P1",c:"Extend",t:"NULL and three-valued logic",
+ sum:"Unknown is a third truth value, and WHERE keeps only true.",
+ src:"W1 pp. 65-69 · W2 null functions · LC cell 22",
+ tags:"null unknown is null coalesce nullif nvl nvl2 three valued logic count distinct not in not exists missing",
+ keys:["Every comparison with NULL yields UNKNOWN, including NULL = NULL. Use IS NULL and IS NOT NULL.",
+  "WHERE keeps rows whose predicate is TRUE. UNKNOWN is discarded like FALSE, but NOT UNKNOWN is still UNKNOWN.",
+  "COALESCE returns the first non-NULL; NULLIF returns NULL when two values match. Oracle adds NVL and NVL2.",
+  "COUNT(*) counts rows, COUNT(col) counts non-NULL values, COUNT(DISTINCT col) counts distinct non-NULL values.",
+  "Ordinary aggregates ignore NULL inputs and an empty SUM returns NULL, not zero. NULL, 0, an empty string and the text 'None' are four different things."],
+ code:[{lab:"Assigned a manager who is not in the table",sql:`SELECT e.employee_id, e.manager_id
+FROM   employees e
+WHERE  e.manager_id IS NOT NULL                 -- exclude 'no manager assigned'
+  AND  NOT EXISTS (SELECT 1 FROM employees m
+                   WHERE m.employee_id = e.manager_id);`},
+  {lab:"The NOT IN trap",sql:`-- One NULL anywhere in the subquery result and this returns nothing at all
+SELECT COUNT(*) FROM employees
+WHERE  department_id NOT IN (SELECT department_id FROM departments);
+
+-- Say what you mean instead
+SELECT COUNT(*) FROM employees e
+WHERE  NOT EXISTS (SELECT 1 FROM departments d
+                   WHERE d.department_id = e.department_id);`}],
+ traps:[["NOT IN plus NULL equals nothing","x NOT IN (1, NULL) is never TRUE. NOT EXISTS expresses exclusion safely."],
+  ["NULL in arithmetic and concatenation","salary * commission_pct is NULL for anyone without a commission; the row survives but the number is gone."],
+  ["GROUP BY keeps NULL","NULL forms its own group, and ORDER BY places it first or last depending on the engine."]],
+ practice:"Find employees whose referenced manager is missing, excluding employees with no assigned manager.",
+ approach:"Two conditions, not one: manager_id IS NOT NULL separates 'no manager' from 'broken reference', and NOT EXISTS tests that the referenced id is absent. A LEFT JOIN with m.employee_id IS NULL is the equivalent anti-join.",
+ mastery:"Explain COUNT(*), COUNT(commission_pct) and COUNT(DISTINCT commission_pct) on the same sample.",
+ lab:"nulls"},
+
+{n:5,p:"P1",pf:"P1",c:"Present",t:"Data types and explicit conversion",
+ sum:"Choose types for meaning, and convert on purpose rather than by accident.",
+ src:"W1 type tables · W2 pp. 3-10 · School problems 6-7",
+ tags:"data types integer decimal float varchar char unicode date timestamp blob cast convert implicit conversion",
+ keys:["Money wants exact decimal, not float. A phone number, a postcode and an id with leading zeros are text, not integers.",
+  "CAST is the portable conversion. Engines add safer forms: TRY_CAST, TRY_CONVERT, Oracle's DEFAULT NULL ON CONVERSION ERROR.",
+  "Formatting a date as text changes its presentation, not its value, and destroys its ordering.",
+  "Character count, byte count, declared length and stored length are four separate ideas.",
+  "Never rely on implicit conversion of formatted text into dates or numbers; it is dialect-specific and locale-sensitive."],
+ code:[{lab:"Clean '98.5%' without inventing zeros",sql:`SELECT school_id,
+       TRY_CAST(REPLACE(TRIM(attendance), '%', '') AS DECIMAL(5,2)) AS attendance_pct
+FROM   schools;
+-- Oracle : CAST(expr AS NUMBER DEFAULT NULL ON CONVERSION ERROR)
+-- SQLite : CAST is silent and returns 0.0 for junk, so screen it first --
+--          CASE WHEN trim(replace(attendance,'%','')) GLOB '[0-9]*'
+--               THEN CAST(trim(replace(attendance,'%','')) AS REAL) END`}],
+ traps:[["Silent coercion to zero","A blunt CAST turns 'n/a' into 0 and quietly drags an average down. Keep bad input as NULL and count it."],
+  ["Text sorting","'100' < '20' < '9' as text. Convert before you sort, not only before you filter."]],
+ practice:"Clean attendance values such as '98.5%', blanks and invalid strings into numeric percentages without silently misclassifying bad data.",
+ approach:"Strip the sign, trim whitespace, then convert with a failure-tolerant cast so unparseable values become NULL. Report how many NULLs the cleaning produced; a step that loses rows without saying so is a data-quality bug of its own.",
+ mastery:"Explain why sorting '100', '20' and '9' as text differs from numeric sorting."},
+
+{n:6,p:"P1",pf:"P1",c:"Extend",t:"Strings, pattern matching, and regular expressions",
+ sum:"Cut, join, search and mask text, and know exactly what a wildcard means.",
+ src:"W2 string scripts/tables · W1 homework Q9 · Exam Q1 · Deck topic list",
+ tags:"string substr substring concat trim upper lower replace instr position length like wildcard regexp regular expression mask escape",
+ keys:["Core kit: concatenation, SUBSTR/SUBSTRING, LENGTH, TRIM, UPPER/LOWER, REPLACE, LPAD/RPAD, INSTR/POSITION.",
+  "LIKE: % matches any run of characters including none, _ matches exactly one. Match them literally with an ESCAPE clause.",
+  "Regex is the least portable part of SQL: REGEXP_LIKE, REGEXP_SUBSTR, the ~ operator, RLIKE and REGEXP_MATCHES all differ.",
+  "Replacing every occurrence of a character is not the same operation as changing a specific position.",
+  "Names and emails make poor identifiers. Join on keys, not on spelling."],
+ code:[{lab:"Mask the middle, keep the ends",sql:`SELECT name,
+       SUBSTR(name, 1, 1)
+       || RPAD('*', LENGTH(name) - 2, '*')
+       || SUBSTR(name, LENGTH(name), 1) AS masked
+FROM   customers
+WHERE  LENGTH(name) >= 3;     -- decide separately what 1 and 2 character names do
+-- MySQL: CONCAT(...) with REPEAT('*', CHAR_LENGTH(name) - 2)`},
+  {lab:"Position matters",sql:`WHERE last_name LIKE '___b%'            -- b in position 4, exactly
+WHERE last_name LIKE '___%b%'           -- b anywhere after position 3
+WHERE last_name LIKE '%!_%' ESCAPE '!'  -- a literal underscore`}],
+ traps:[["Off-by-one on short strings","LENGTH(name) - 2 goes negative for a one-character name and the expression errors or returns NULL."],
+  ["NULL in, NULL out","Concatenation with a NULL column yields NULL in standard SQL. Oracle treats the empty string as NULL; most engines do not."]],
+ practice:"Mask a name while preserving its first and last characters; extract a phone prefix; validate a constrained identifier pattern.",
+ approach:"Guard the length first, then build the mask from three pieces. For the prefix, use a fixed SUBSTR only if the format is fixed, otherwise locate the separator with INSTR. For validation, anchor the regex at both ends so a partial match cannot pass.",
+ mastery:"Explain why LIKE '___b%' means b in exactly the fourth position, not anywhere after the third."},
+
+{n:7,p:"P1",pf:"P1",c:"Extend",t:"Numeric calculations and safe ratios",
+ sum:"Define the numerator and denominator in words before you type the slash.",
+ src:"Salary exercises · LC retention and restaurant examples · W2 aggregates",
+ tags:"arithmetic integer division round trunc floor ceil mod precision overflow ratio rate nullif weighted average",
+ keys:["Integer division truncates in many engines: 1/2 is 0. Multiply by 1.0 or cast one side to decimal.",
+  "NULLIF(denominator, 0) turns a divide-by-zero into NULL. Replace that NULL with 0 only when the metric definition says an empty group scores zero.",
+  "A ratio of totals is not the average of ratios. SUM(x)/SUM(y) weights by size; AVG(x/y) treats a 2-row group like a 2000-row group.",
+  "Weighted average price is total extended value divided by total quantity.",
+  "Round at presentation time unless a business rule requires rounding in between."],
+ code:[{lab:"Conversion rate and weighted price, zero-activity groups kept",sql:`SELECT c.campaign_id,
+       COUNT(v.visit_id)                                               AS visits,
+       COALESCE(SUM(v.converted), 0)                                   AS conversions,
+       ROUND(1.0 * SUM(v.converted) / NULLIF(COUNT(v.visit_id), 0), 4) AS conversion_rate,
+       SUM(v.price * v.qty) / NULLIF(SUM(v.qty), 0)                    AS weighted_avg_price
+FROM   campaigns c
+LEFT   JOIN visits v ON v.campaign_id = c.campaign_id
+GROUP  BY c.campaign_id;`}],
+ traps:[["Average of averages","Two groups at 50% (2 of 4) and 10% (10 of 100) average to 30%, but the overall rate is 11.5%. Say which one the question wants."],
+  ["Silent integer maths","SUM(converted) / COUNT(*) can return 0 on every row and still look like a real answer."]],
+ practice:"Calculate conversion rate and weighted average selling price with zero-activity groups included.",
+ approach:"Start from the dimension table with a LEFT JOIN so empty groups survive, count the child key rather than the row, force decimal division, and guard the denominator with NULLIF. Decide out loud whether a campaign with no visits shows NULL or 0.",
+ mastery:"Give a two-group example in which the average conversion rate differs substantially from the overall conversion rate."},
+
+{n:8,p:"P1",pf:"P1",c:"Extend",t:"Dates, timestamps, and calendar boundaries",
+ sum:"Half-open intervals, always. An instant is not a business date.",
+ src:"W1 date filters · W2 date functions · W4 homework Q9 · LC",
+ tags:"date timestamp interval extract date_trunc add_months datediff boundary timezone leap year daylight saving half open",
+ keys:["Filter timestamps with ts >= start AND ts < next_start. BETWEEN a pair of date literals ends at midnight and drops the final day.",
+  "EXTRACT pulls a part, DATE_TRUNC snaps to a boundary, INTERVAL arithmetic moves by calendar units.",
+  "Elapsed duration and crossed calendar boundaries are different questions. Subtracting year numbers is not tenure.",
+  "A 24-hour duration and a calendar day differ across daylight-saving transitions.",
+  "Never convert a date to a display string in order to filter it; you lose the index and the ordering."],
+ code:[{lab:"February, next month, and the last 15 complete years",sql:`SELECT * FROM orders
+WHERE  order_ts >= DATE '2024-02-01'
+  AND  order_ts <  DATE '2024-03-01';        -- leap-year safe, time-of-day safe
+
+SELECT DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' AS next_month_start;
+
+SELECT * FROM employees
+WHERE  hire_date >= CURRENT_DATE - INTERVAL '15 years';  -- Oracle: ADD_MONTHS(SYSDATE, -180)`}],
+ traps:[["The final day disappears","hire_date BETWEEN '2005-01-01' AND '2005-12-31' misses anything stamped 2005-12-31 09:14 when the column carries a time."],
+  ["Whose today?","CURRENT_DATE is the server's or session's date. Name the timezone that defines the business day before reporting on it."]],
+ practice:"Find orders in February, the first day of next month, and employees hired during the last 15 complete years.",
+ approach:"Derive boundaries with DATE_TRUNC rather than writing literals, keep every range half-open, and define 'complete years' precisely: 15 anniversaries back from today, or the start of the year 15 years ago? They can differ by up to 364 days.",
+ mastery:"Explain which timezone defines today, and how your query handles an event exactly at the period boundary."},
+
+{n:9,p:"P1",pf:"P1",c:"Present",t:"Aggregation, GROUP BY, and HAVING",
+ sum:"The grouping columns are the grain of the output. WHERE filters rows, HAVING filters groups.",
+ src:"W2 pp. 25-39 and all exercises · Census · School · Project",
+ tags:"count sum min max avg group by having distinct aggregate rollup cube grouping sets grain",
+ keys:["WHERE removes input rows before grouping; HAVING removes groups after it. An aggregate can only appear in HAVING, SELECT or ORDER BY.",
+  "Every non-aggregated column in SELECT normally has to appear in GROUP BY. Postgres and MySQL relax this for columns functionally dependent on the grouped key.",
+  "MAX(salary) returns a value, not the employee who earned it. To get the row, rank it or join back.",
+  "AVG(DISTINCT salary) reweights the metric: three people on 3000 count once.",
+  "ROLLUP, CUBE and GROUPING SETS add subtotal rows; GROUPING() distinguishes a subtotal NULL from a data NULL."],
+ code:[{lab:"Headcount, average and spread per department",sql:`SELECT d.department_id, d.department_name,
+       COUNT(e.employee_id)          AS headcount,     -- not COUNT(*)
+       ROUND(AVG(e.salary), 2)       AS avg_salary,
+       MAX(e.salary) - MIN(e.salary) AS salary_spread
+FROM   departments d
+LEFT   JOIN employees e ON e.department_id = d.department_id
+GROUP  BY d.department_id, d.department_name
+HAVING MAX(e.salary) - MIN(e.salary) > 5000
+ORDER  BY salary_spread DESC;`}],
+ traps:[["COUNT(*) after a LEFT JOIN","An empty department still has one preserved row, so COUNT(*) reports 1 where COUNT(e.employee_id) reports 0."],
+  ["HAVING removes the empty groups again","The spread of an empty department is NULL, and NULL > 5000 is UNKNOWN. Add OR COUNT(e.employee_id) = 0 if those departments must stay."]],
+ practice:"Return department headcount, average salary and salary spread, keeping departments with a spread above 5,000.",
+ approach:"LEFT JOIN from departments so empty ones survive the join, count the child key, and be explicit about whether the HAVING clause is allowed to remove them again.",
+ mastery:"Explain how to include departments with zero employees, and why COUNT(employee_id) matters after a left join."},
+
+{n:10,p:"P1",pf:"P1",c:"Present",t:"CASE, conditional aggregation, and pivots",
+ sum:"CASE inside an aggregate turns rows into columns in a single pass.",
+ src:"W2 CASE/DECODE · Exam Q6 · seasonal hiring exercises",
+ tags:"case when decode pivot unpivot conditional aggregation sum case count case categories buckets",
+ keys:["Branches evaluate top to bottom and the first TRUE wins, so order ranges from narrowest to widest.",
+  "Without ELSE an unmatched row yields NULL. That is what you want inside COUNT, and never what you want inside SUM of a flag.",
+  "SUM(CASE WHEN c THEN 1 ELSE 0 END) and COUNT(CASE WHEN c THEN 1 END) both count matches. COUNT(CASE ... ELSE 0 END) counts everything, because 0 is not NULL.",
+  "All branches must return compatible types; a stray string in a numeric CASE errors on some engines and silently casts on others.",
+  "Conditional aggregation ports everywhere. PIVOT and UNPIVOT do not."],
+ code:[{lab:"One row per hire year, one column per department",sql:`SELECT EXTRACT(YEAR FROM hire_date) AS hire_year,
+       COUNT(CASE WHEN department_id = 20 THEN 1 END) AS dept_20,
+       COUNT(CASE WHEN department_id = 50 THEN 1 END) AS dept_50,
+       COUNT(CASE WHEN department_id = 80 THEN 1 END) AS dept_80,
+       COUNT(CASE WHEN department_id = 90 THEN 1 END) AS dept_90
+FROM   employees
+GROUP  BY EXTRACT(YEAR FROM hire_date)
+ORDER  BY hire_year;`}],
+ traps:[["Gaps between buckets","WHEN salary <= 3000 ... WHEN salary > 3001 leaves 3000.50 unclassified, and it falls through to ELSE."],
+  ["Missing categories never appear","A year with no hires at all is simply absent. Join to a year list if the report needs the zero row."]],
+ practice:"Recreate Exam Q6: one row per hire year with employee counts for departments 20, 50, 80 and 90.",
+ approach:"Group by the year expression and write one conditional count per department. Use COUNT(CASE WHEN ... THEN 1 END) so unmatched rows contribute nothing, and remember that a year with no qualifying hire in any department will not appear at all.",
+ mastery:"Explain what happens when a decimal salary falls between integer bucket boundaries such as 3,000 and 3,001."},
+
+{n:11,p:"P1",pf:"P1",c:"Present",t:"Join types and filter placement",
+ sum:"ON decides what matches; WHERE decides what survives. On an outer join those differ.",
+ src:"W3 lecture pp. 3-15 · Deck 26, 39-40 · W3 scripts",
+ tags:"inner left right full outer cross join on using filter placement equi join inequality join cartesian product",
+ keys:["INNER keeps matched pairs, LEFT keeps every left row, FULL keeps both sides, CROSS keeps every combination.",
+  "On an outer join, a right-side predicate in ON limits which rows match while preserving unmatched left rows. The same predicate in WHERE deletes those preserved rows, because their columns are NULL.",
+  "That is a semantic decision, not a style preference.",
+  "USING collapses the join column to one; ON keeps both and needs qualified names.",
+  "A missing ON condition is a cross product. Multi-column keys need every column in the condition."],
+ code:[{lab:"Every department, counting only high earners",sql:`SELECT d.department_id, d.department_name,
+       COUNT(e.employee_id) AS qualifying_employees
+FROM   departments d
+LEFT   JOIN employees e
+  ON   e.department_id = d.department_id
+ AND   e.salary > 5000        -- in ON: departments with no high earner still appear, at 0
+GROUP  BY d.department_id, d.department_name;`},
+  {lab:"The same predicate in WHERE",sql:`FROM   departments d
+LEFT   JOIN employees e ON e.department_id = d.department_id
+WHERE  e.salary > 5000        -- in WHERE: now an inner join, the zero-count rows are gone`}],
+ traps:[["Legacy syntax","Comma joins and Oracle (+) still appear in old scripts. Read them, write explicit joins."],
+  ["RIGHT JOIN reading","Most people misread it. Reorder the tables and use LEFT, unless a FULL join is what you need."]],
+ practice:"List every department and count employees earning above 5,000, including zero counts.",
+ approach:"Start from departments, LEFT JOIN employees, and put the salary test in the ON clause so unmatched departments survive. Count the employee key so preserved rows score 0 rather than 1.",
+ mastery:"Show the different outputs obtained by putting the salary filter in ON and in WHERE.",
+ lab:"join"},
+
+{n:12,p:"P1",pf:"P1",c:"Extend",t:"Join cardinality and double counting",
+ sum:"Two children joined to one parent multiply each other. Aggregate first, then join.",
+ src:"HR multi-table exercises · Chicago joins · LC daily aggregation",
+ tags:"cardinality fan out double counting many to many multiply revenue inflation distinct pre-aggregate reconcile",
+ keys:["Predict multiplicity before running: one-to-one preserves rows, one-to-many multiplies, many-to-many multiplies both ways.",
+  "An order with 3 items and 2 payments produces 6 rows. SUM over that join triples the payments and doubles the items.",
+  "Fix it by aggregating each child to the parent grain in its own CTE, then joining the summaries.",
+  "Use EXISTS when only membership matters; an existence test cannot multiply rows.",
+  "SUM(DISTINCT amount) is not a repair. Two genuine payments of 50.00 are not one payment."],
+ code:[{lab:"Summarise each child first",sql:`WITH item_totals AS (
+    SELECT order_id, SUM(qty * unit_price) AS order_amount
+    FROM   order_items GROUP BY order_id
+), payment_totals AS (
+    SELECT order_id, SUM(amount) AS paid_amount
+    FROM   payments GROUP BY order_id
+)
+SELECT o.order_id, c.customer_name, i.order_amount, p.paid_amount
+FROM   orders o
+JOIN   customers     c ON c.customer_id = o.customer_id
+LEFT   JOIN item_totals    i ON i.order_id = o.order_id
+LEFT   JOIN payment_totals p ON p.order_id = o.order_id;`}],
+ traps:[["DISTINCT as a reflex","It hides the duplication instead of diagnosing it, and it deletes genuinely repeated events."],
+  ["Reference data that is not unique","A lookup table with two rows per code multiplies the fact table silently."]],
+ practice:"Combine order totals, payment totals and customer attributes without multiplying revenue.",
+ approach:"One CTE per child at the order grain, then join the two summaries onto orders. Verify with three numbers before and after: row count, distinct order count, and total amount.",
+ mastery:"Reconcile row counts, distinct business keys and totals before and after each join."},
+
+{n:13,p:"P1",pf:"P1 · P2 for deeper hierarchies",c:"Extend",t:"Self joins, hierarchies, and temporal joins",
+ sum:"The same table twice, or a join on a validity range rather than an equality.",
+ src:"W3 homework Q2-4 · LC seat and price examples",
+ tags:"self join manager hierarchy temporal validity valid_from valid_to as of range join peers previous row",
+ keys:["Manager lookup is employee.manager_id = manager.employee_id. Aliases are mandatory and they carry the meaning.",
+  "Use LEFT JOIN when employees without a manager must be kept; INNER silently drops the top of the tree.",
+  "A department manager (departments.manager_id) is a different relationship from an employee's reporting manager.",
+  "Temporal joins match on a range: event_time >= valid_from AND event_time < valid_to. Decide how an open-ended valid_to is stored.",
+  "Non-overlapping validity ranges are what stop a temporal join from duplicating rows."],
+ code:[{lab:"Hired before your own manager",sql:`SELECT e.employee_id, e.hire_date,
+       m.employee_id AS manager_id, m.hire_date AS manager_hire_date
+FROM   employees e
+JOIN   employees m ON m.employee_id = e.manager_id
+WHERE  e.hire_date < m.hire_date;`},
+  {lab:"The price valid on the sale date",sql:`SELECT s.sale_id, s.sale_date, p.price
+FROM   sales s
+JOIN   price_history p
+  ON   p.product_id = s.product_id
+ AND   s.sale_date >= p.valid_from
+ AND   s.sale_date <  COALESCE(p.valid_to, DATE '9999-12-31');`}],
+ traps:[["Joining an id to itself","e.employee_id = m.employee_id finds each employee's own row, not the manager. It looks plausible and is always wrong."],
+  ["Job history is not promotion history","A job-change row records a different assignment; nothing in it says the move was upward."]],
+ practice:"Find employees hired before their managers, then match each sale to the price valid on its sale date.",
+ approach:"Alias the table twice and keep the direction of manager_id straight. For the temporal match use a half-open range with a sentinel or COALESCE for the open-ended row, then check that no product has overlapping ranges, because that would duplicate sales.",
+ mastery:"Explain why the current job ID cannot identify an employee's historical job title."},
+
+{n:14,p:"P1",pf:"P1",c:"Present",t:"Set operations and duplicate semantics",
+ sum:"Sets answer membership questions; joins answer combination questions.",
+ src:"W3 pp. 17-21 · Exam Q5 · LC friendship and movie-rating examples",
+ tags:"union union all intersect except minus duplicates set operations compatible columns position",
+ keys:["UNION removes duplicate result rows; UNION ALL keeps them and is cheaper.",
+  "INTERSECT is 'in both'; EXCEPT (Oracle MINUS) is 'in the first and not the second'.",
+  "Operands need the same number of columns and compatible types; columns align by position, not by name.",
+  "ORDER BY belongs to the whole statement and goes last. To limit one branch, wrap that branch in a subquery.",
+  "INTERSECT and EXCEPT also de-duplicate by default; the ALL variants exist but are not supported everywhere."],
+ code:[{lab:"Either, both, only the first",sql:`SELECT department_id FROM emp_2023 UNION     SELECT department_id FROM emp_2024;  -- either
+SELECT department_id FROM emp_2023 INTERSECT SELECT department_id FROM emp_2024;  -- both
+SELECT department_id FROM emp_2023 EXCEPT    SELECT department_id FROM emp_2024;  -- first only`},
+  {lab:"Both endpoints of an undirected edge",sql:`WITH edges AS (
+    SELECT requester_id AS person_id FROM friendship
+    UNION  ALL                                  -- ALL is load-bearing here
+    SELECT accepter_id  AS person_id FROM friendship
+)
+SELECT person_id, COUNT(*) AS friends
+FROM   edges GROUP BY person_id;`}],
+ traps:[["UNION where you meant UNION ALL","De-duplicating the edge list throws away one endpoint of every mutual pair, and every count collapses."],
+  ["Columns aligned by position","Two SELECTs with the same column names in a different order will happily union the wrong data together."]],
+ practice:"Find departments represented in either source, both sources, and only the first source.",
+ approach:"Three statements with the same projection, differing only in the operator. Then ask whether duplicates carry meaning in your data: if a row is an event rather than a key, UNION silently destroys information.",
+ mastery:"Explain why changing UNION ALL to UNION breaks the friendship-count calculation."},
+
+{n:15,p:"P1",pf:"P1",c:"Extend",t:"Subqueries, EXISTS, and anti joins",
+ sum:"EXISTS for at least one, NOT EXISTS for none, derived tables for a new grain.",
+ src:"W3 subqueries/scripts · Exam Q2-3 · Deck 25 · LC cells 14-22, 36",
+ tags:"subquery scalar correlated derived table exists not exists in not in any all anti join semi join",
+ keys:["A scalar subquery returns at most one row and one column. No row yields NULL; several rows is an error.",
+  "A correlated subquery references the outer row, so it is conceptually evaluated per row. The optimizer usually rewrites it as a join.",
+  "EXISTS stops at the first match and never multiplies the outer row. A join can multiply it.",
+  "NOT IN is unsafe with NULLs; NOT EXISTS and the LEFT JOIN ... IS NULL anti-join are not.",
+  "ANY and ALL compare against a set: x > ALL(...) means greater than the maximum, and against an empty set ALL is TRUE while ANY is FALSE."],
+ code:[{lab:"Above your own department's average",sql:`SELECT e.employee_id, e.department_id, e.salary
+FROM   employees e
+WHERE  e.salary > (SELECT AVG(x.salary) FROM employees x
+                   WHERE x.department_id = e.department_id);`},
+  {lab:"Customers with no orders, three ways",sql:`SELECT c.customer_id FROM customers c
+WHERE  NOT EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id);
+
+SELECT c.customer_id FROM customers c
+LEFT   JOIN orders o ON o.customer_id = c.customer_id
+WHERE  o.customer_id IS NULL;
+
+SELECT c.customer_id FROM customers c       -- safe only if orders.customer_id is NOT NULL
+WHERE  c.customer_id NOT IN (SELECT o.customer_id FROM orders o);`}],
+ traps:[["Scalar subquery returned two rows","Usually a sign the correlation is incomplete: you matched on department but forgot the year."],
+  ["Assuming performance","A correlated subquery is not automatically slow and a join is not automatically fast. Read the plan."]],
+ practice:"Find employees above their department average, customers with no orders, and departments containing an employee matching a condition.",
+ approach:"Above-average needs correlation on department. No-orders is an anti-join, best written as NOT EXISTS. 'A department containing at least one such employee' is a semi-join with EXISTS: you want the department once, not once per matching employee.",
+ mastery:"Explain why a join can duplicate outer rows while an existence test does not."},
+
+{n:16,p:"P1",pf:"P1 · P2 for recursion",c:"Extend",t:"CTEs and recursive queries",
+ sum:"Name each stage, expose each grain, and let recursion walk the tree.",
+ src:"W4 p. 29 and scripts · LC",
+ tags:"cte with recursive anchor term cycle hierarchy manager chain materialization connect by",
+ keys:["WITH names an intermediate result so the reader can see the grain at each stage. CTEs can chain, and a later one can reference an earlier one.",
+  "A CTE is not a table and not automatically a performance win. Materialization behaviour is engine-specific and sometimes hint-controlled.",
+  "A recursive CTE has an anchor member, UNION ALL, and a recursive member that references the CTE itself.",
+  "Termination is your responsibility: a depth counter, a visited-path string, or the engine's CYCLE clause.",
+  "Oracle also offers CONNECT BY ... PRIOR for hierarchies."],
+ code:[{lab:"Walk the management chain",sql:`WITH RECURSIVE chain (employee_id, manager_id, lvl, path) AS (
+    SELECT employee_id, manager_id, 1, CAST(employee_id AS VARCHAR(400))
+    FROM   employees
+    WHERE  manager_id IS NULL                            -- anchor: the top of the tree
+    UNION  ALL
+    SELECT e.employee_id, e.manager_id, c.lvl + 1, c.path || '>' || e.employee_id
+    FROM   employees e
+    JOIN   chain c ON e.manager_id = c.employee_id       -- recursive member
+    WHERE  c.lvl < 20                                    -- guard against cycles
+)
+SELECT * FROM chain ORDER BY lvl, employee_id;
+-- Oracle: drop the RECURSIVE keyword, or use CONNECT BY PRIOR employee_id = manager_id`}],
+ traps:[["No termination guard","One data cycle (A reports to B, B reports to A) loops until the engine gives up."],
+  ["UNION instead of UNION ALL","De-duplicating at each step changes the result as well as the cost."]],
+ practice:"Compute department statistics once and join them to both an employee and the employee's manager; then traverse a manager hierarchy.",
+ approach:"One CTE holding department averages at department grain, joined twice under different aliases. For the hierarchy, start from managerless employees and carry a level counter so you can both stop and report depth.",
+ mastery:"Explain how your recursive query terminates, and what happens if the source contains a cycle."},
+
+{n:17,p:"P1",pf:"P1",c:"Extend",t:"Window functions and window frames",
+ sum:"Keep the detail row and calculate across its neighbours.",
+ src:"W4 pp. 30-36 · LC queue example",
+ tags:"window over partition by order by frame rows range unbounded preceding current row peers analytic qualify",
+ keys:["GROUP BY collapses rows; OVER() keeps them and adds a calculation alongside.",
+  "PARTITION BY resets the calculation per group. The window ORDER BY defines the sequence inside the partition, not the output order.",
+  "The frame is the slice of the partition the function sees. With an ORDER BY and no explicit frame, the default is RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW, which includes every peer row tied with the current one.",
+  "ROWS counts physical rows; RANGE counts value peers. For cumulative and rolling work, state ROWS explicitly.",
+  "Ranking and offset functions ignore the frame; value functions such as LAST_VALUE are entirely controlled by it."],
+ code:[{lab:"Detail, partition average, running total",sql:`SELECT employee_id, department_id, hire_date, salary,
+       AVG(salary) OVER (PARTITION BY department_id)         AS dept_avg,
+       SUM(salary) OVER (PARTITION BY department_id
+                         ORDER BY hire_date, employee_id
+                         ROWS BETWEEN UNBOUNDED PRECEDING
+                                  AND CURRENT ROW)           AS running_salary
+FROM   employees
+ORDER  BY department_id, hire_date;`}],
+ traps:[["Ties jump the running total","Under the default RANGE frame, three employees hired the same day all show the same cumulative figure, which already includes all three."],
+  ["Filtering a window result","It cannot go in WHERE. Wrap the query in a CTE, or use QUALIFY where the engine has it."]],
+ practice:"Show each employee's salary, the departmental average, and the cumulative salary in hire order.",
+ approach:"One window without ORDER BY for the partition-wide average, one with ORDER BY and an explicit ROWS frame for the cumulative figure. Add a unique tie-breaker to the window ORDER BY so the running total is reproducible.",
+ mastery:"Explain why a cumulative sum can jump by several rows at a time when the ordering values tie.",
+ lab:"frame"},
+
+{n:18,p:"P1",pf:"P1",c:"Present",t:"Ranking, ties, and top N per group",
+ sum:"Three functions, three different answers to 'the top three'.",
+ src:"W4 case study Q1-3 · Exam Q7 · LC department salary example",
+ tags:"row_number rank dense_rank ntile percent_rank cume_dist top n per group ties qualify second highest",
+ keys:["For 100, 100, 90: ROW_NUMBER gives 1, 2, 3; RANK gives 1, 1, 3; DENSE_RANK gives 1, 1, 2.",
+  "Exactly three employees means ROW_NUMBER <= 3 with a unique tie-breaker. The top three salary levels means DENSE_RANK <= 3.",
+  "Adding employee_id to a DENSE_RANK ordering destroys the tie groups you were ranking by. Add it to ROW_NUMBER only.",
+  "Filter the rank in an outer query or CTE. QUALIFY works on Snowflake, BigQuery, DuckDB and Teradata.",
+  "NTILE, PERCENT_RANK and CUME_DIST extend the same idea to buckets and distribution."],
+ code:[{lab:"Top three salary levels per department",sql:`WITH ranked AS (
+    SELECT employee_id, department_id, salary,
+           DENSE_RANK() OVER (PARTITION BY department_id
+                              ORDER BY salary DESC) AS salary_rank
+    FROM   employees
+    WHERE  salary IS NOT NULL
+)
+SELECT employee_id, department_id, salary
+FROM   ranked
+WHERE  salary_rank <= 3
+ORDER  BY department_id, salary DESC, employee_id;`},
+  {lab:"Second highest distinct salary",sql:`SELECT MAX(salary) AS second_highest
+FROM   employees
+WHERE  salary < (SELECT MAX(salary) FROM employees);   -- NULL when there is no second level`}],
+ traps:[["DENSE_RANK < 3 is two levels","Not three. This off-by-one is the most common ranking bug in saved course answers."],
+  ["Departments smaller than N","A department with one employee returns one row. Say whether that is acceptable before calling the query correct."]],
+ practice:"Solve second-highest distinct salary, top three salaries per department, and exactly three highest-paid employees per department.",
+ approach:"Distinct levels means DENSE_RANK; an exact headcount means ROW_NUMBER with a deterministic tie-breaker. Test all three against a department where three people share one salary, and another where only one employee exists.",
+ mastery:"Predict the row count with ties, missing salaries, and departments containing fewer than three employees.",
+ lab:"rank"},
+
+{n:19,p:"P1",pf:"P1",c:"Extend",t:"LAG, LEAD, FIRST_VALUE, and LAST_VALUE",
+ sum:"Look at the neighbouring row, or at the edge of the frame.",
+ src:"W4 lecture/scripts and case study Q4",
+ tags:"lag lead first_value last_value nth_value offset previous next default frame ignore nulls",
+ keys:["LAG and LEAD take an offset in rows, plus an optional default for the missing neighbour.",
+  "An offset of 1 is the previous row in the given order. It is yesterday only when there is exactly one row per day and no gaps.",
+  "A missing predecessor (first row of the partition) and a predecessor whose value is NULL look identical unless you test for both.",
+  "FIRST_VALUE and LAST_VALUE read the frame. The default frame ends at the current row, so LAST_VALUE returns the current row's own value.",
+  "For a true partition-wide LAST_VALUE, write ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING."],
+ code:[{lab:"Compare with the previous hire",sql:`SELECT employee_id, hire_date, salary,
+       LAG(salary) OVER (ORDER BY hire_date, employee_id)          AS prev_salary,
+       salary - LAG(salary) OVER (ORDER BY hire_date, employee_id) AS delta
+FROM   employees;`},
+  {lab:"Final status carried onto every event",sql:`SELECT account_id, event_ts, status,
+       LAST_VALUE(status) OVER (
+           PARTITION BY account_id
+           ORDER BY event_ts
+           ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS final_status
+FROM   account_events;`}],
+ traps:[["The default frame bites","LAST_VALUE without an explicit frame is the classic 'why is this column just a copy of my column' bug."],
+  ["Offsets are not calendar units","LAG(sales, 1) is the previous row present in the data, which skips missing days entirely."]],
+ practice:"Compare each hire's salary with the previous hire, and attach the last recorded status to every event for an account.",
+ approach:"Use a deterministic ORDER BY in both windows. For the carried status, spell out the full frame; otherwise the value is whatever the current row already had.",
+ mastery:"Explain why LAG(sales) is not automatically yesterday's sales."},
+
+{n:20,p:"P1",pf:"P1",c:"Extend",t:"Running totals and rolling time windows",
+ sum:"Aggregate to the day first, then roll. Seven rows is not seven days.",
+ src:"LC queue cell 19 and restaurant cell 30",
+ tags:"running total cumulative moving average rolling window seven day date spine capacity threshold trailing centred",
+ keys:["ROWS BETWEEN 6 PRECEDING AND CURRENT ROW is seven rows. It is seven calendar days only if every day has exactly one row.",
+  "Aggregate transactions to daily grain in a CTE before any daily rolling calculation.",
+  "Decide the missing-day rule up front: count as zero, exclude, or invalidate the window.",
+  "Filter incomplete leading windows deliberately with a COUNT over the same frame, plus a real date spine when continuity matters.",
+  "A trailing window and a centred window answer different questions."],
+ code:[{lab:"Seven-day rolling revenue",sql:`WITH daily AS (
+    SELECT visited_on, SUM(amount) AS revenue
+    FROM   customer GROUP BY visited_on
+), rolled AS (
+    SELECT visited_on,
+           SUM(revenue) OVER (ORDER BY visited_on
+                              ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS revenue_7d,
+           COUNT(*)     OVER (ORDER BY visited_on
+                              ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS days_in_frame
+    FROM   daily
+)
+SELECT visited_on, revenue_7d, ROUND(revenue_7d / 7.0, 2) AS avg_daily
+FROM   rolled
+WHERE  days_in_frame = 7
+ORDER  BY visited_on;`}],
+ traps:[["The COUNT check is not continuity","It proves seven rows exist, not that they are seven consecutive dates. Only a date spine proves that."],
+  ["Duplicate dates","Two rows for one day silently shorten the window to six days of data."]],
+ practice:"Rewrite the notebook's six self joins as a daily rolling window. Find the final person whose cumulative queue weight stays within capacity.",
+ approach:"Collapse to one row per day, then apply one window instead of six joins. For the queue, run a cumulative SUM in boarding order and take the last row whose total is still within capacity, with a deterministic tie-breaker.",
+ mastery:"Test duplicate dates, a missing date, ties in the ordering, and a zero-activity day.",
+ lab:"frame"},
+
+{n:21,p:"P1",pf:"P1",c:"Present",t:"Latest records and historical state",
+ sum:"A maximum timestamp is a value. Recovering its row is a separate step.",
+ src:"LC price-change cells 14-16 · Exam Q3 · W3 job history",
+ tags:"latest row per entity first event state as of date historical current snapshot price change default",
+ keys:["Latest row per entity: ROW_NUMBER over the entity partition ordered by timestamp DESC, then keep rank 1.",
+  "MAX(ts) alone gives you the instant, not the row. Joining back on MAX(ts) needs the full key or it duplicates.",
+  "State as of a date means: filter to changes at or before the cutoff first, then take the latest of those.",
+  "Start from the complete entity universe so entities with no change before the cutoff still appear; apply a default only if the specification says so.",
+  "Decide what happens when two rows share the latest timestamp."],
+ code:[{lab:"Every product's price on a given date",sql:`WITH latest AS (
+    SELECT product_id, new_price,
+           ROW_NUMBER() OVER (PARTITION BY product_id
+                              ORDER BY change_date DESC) AS rn
+    FROM   products
+    WHERE  change_date <= DATE '2019-08-16'    -- filter FIRST, then rank
+)
+SELECT p.product_id, COALESCE(l.new_price, 10) AS price   -- 10 = documented default
+FROM   (SELECT DISTINCT product_id FROM products) p
+LEFT   JOIN latest l ON l.product_id = p.product_id AND l.rn = 1;`}],
+ traps:[["Latest ever, then filter","Ranking first and filtering afterwards returns nothing for a product whose only recent change is after the cutoff. Filter, then rank."],
+  ["Current attributes on historical rows","An employee's current job title does not describe the job they held in 2011."]],
+ practice:"Find every product's price on a given date, including products whose first change occurs later.",
+ approach:"Restrict to changes up to the cutoff, rank per product, keep rank 1, and LEFT JOIN that onto the full product list so untouched products keep the default price.",
+ mastery:"Explain the difference between 'latest ever, then filter' and 'latest among rows before the cutoff'."},
+
+{n:22,p:"P2",pf:"P2",c:"Extend",t:"Consecutive events, gaps, islands, and sessions",
+ sum:"Turn a run of rows into a group id, then aggregate the groups.",
+ src:"LC consecutive-number cells 9-11 · window functions in W4",
+ tags:"gaps islands consecutive streak session sessionization run lag row_number difference threshold",
+ keys:["Decide what consecutive means: neighbouring rows in an order, adjacent numeric ids, or adjacent calendar dates. They are not interchangeable.",
+  "Islands trick: date minus ROW_NUMBER over the date order is constant within a run.",
+  "Sessions: a new group starts when the gap since the previous event exceeds the threshold; a cumulative SUM of that flag numbers the sessions.",
+  "De-duplicate user-days before counting day streaks, or two logins on one day break the arithmetic.",
+  "Define whether a gap exactly equal to the threshold starts a new session."],
+ code:[{lab:"Islands: three consecutive active days",sql:`WITH d AS (
+    SELECT DISTINCT user_id, activity_date FROM activity
+), grp AS (
+    SELECT user_id, activity_date,
+           activity_date - CAST(ROW_NUMBER() OVER (PARTITION BY user_id
+                                ORDER BY activity_date) AS INTEGER) AS island
+    FROM   d
+)
+SELECT user_id, MIN(activity_date) AS run_start, MAX(activity_date) AS run_end,
+       COUNT(*) AS days
+FROM   grp
+GROUP  BY user_id, island
+HAVING COUNT(*) >= 3;   -- Postgres/DuckDB date maths; elsewhere use DATEADD or julianday`},
+  {lab:"Sessions split by a 30 minute gap",sql:`SELECT user_id, event_ts,
+       SUM(CASE WHEN prev_ts IS NULL
+                  OR event_ts > prev_ts + INTERVAL '30 minutes'
+                THEN 1 ELSE 0 END)
+         OVER (PARTITION BY user_id ORDER BY event_ts) AS session_no
+FROM  (SELECT user_id, event_ts,
+              LAG(event_ts) OVER (PARTITION BY user_id ORDER BY event_ts) AS prev_ts
+       FROM   events) s;`}],
+ traps:[["id + 1 is not consecutive","Deleted rows leave gaps in an id sequence, so neighbouring records no longer have neighbouring ids. Use LAG over the order you actually mean."],
+  ["Duplicate days","Two rows for the same date shift every later island value and split a real streak in two."]],
+ practice:"Find users with three consecutive active days and group events into sessions separated by more than 30 minutes.",
+ approach:"De-duplicate to one row per user-day, compute date minus row number, group by that island value and filter on the run length. For sessions, flag the gap with LAG and turn the flags into ids with a cumulative SUM.",
+ mastery:"Show why id + 1 misses consecutive records when the ids have gaps."},
+
+{n:23,p:"P1",pf:"P1 basics · P2 full cohorts",c:"Extend",t:"Retention, funnels, and business metrics",
+ sum:"Population, event, window, numerator, denominator, grain. In that order.",
+ src:"LC first-login, active-user, rating and friendship examples",
+ tags:"retention cohort funnel dau mau conversion churn repeat purchase revenue aov growth denominator eligibility",
+ keys:["Write the six parts down before any SQL: population, qualifying event, time window, numerator, denominator, output grain.",
+  "De-duplicate qualifying users before counting, or one enthusiastic user inflates the metric.",
+  "Next-day retention is measured from each user's first activity date, not from any activity date.",
+  "Cohorts need observation eligibility: users who signed up yesterday have not yet had a chance to return on day 7.",
+  "Say whether the metric counts users, sessions, orders or events. Those four numbers never agree."],
+ code:[{lab:"Day-1 retention by signup month",sql:`WITH first_day AS (
+    SELECT user_id, MIN(activity_date) AS signup_date
+    FROM   activity GROUP BY user_id
+), returned AS (
+    SELECT DISTINCT f.user_id
+    FROM   first_day f
+    JOIN   activity a ON a.user_id = f.user_id
+                     AND a.activity_date = f.signup_date + 1
+)
+SELECT DATE_TRUNC('month', f.signup_date)                              AS cohort_month,
+       COUNT(DISTINCT f.user_id)                                       AS cohort_size,
+       COUNT(DISTINCT r.user_id)                                       AS returned_day1,
+       ROUND(1.0 * COUNT(DISTINCT r.user_id)
+                 / NULLIF(COUNT(DISTINCT f.user_id), 0), 4)            AS day1_retention
+FROM   first_day f
+LEFT   JOIN returned r ON r.user_id = f.user_id
+GROUP  BY DATE_TRUNC('month', f.signup_date)
+ORDER  BY cohort_month;`}],
+ traps:[["An incomplete cohort looks like churn","The newest cohort has not finished its observation window. Exclude it or label it."],
+  ["Counting events instead of users","COUNT(*) of logins is not active users; COUNT(DISTINCT user_id) is."]],
+ practice:"Extend the next-day retention example to a signup-month cohort report with day-1 and day-7 retention.",
+ approach:"One CTE for each user's first day, one per return window, then aggregate by cohort month with distinct user counts. Exclude cohorts whose day-7 window has not closed, and say so in the output rather than silently.",
+ mastery:"Defend your denominator, and describe how duplicate events or incomplete observation periods affect it."},
+
+{n:24,p:"P1",pf:"P1",c:"Extend",t:"Duplicate detection and data-quality repair",
+ sum:"Duplicate row, duplicate business key and repeated event are three different findings.",
+ src:"W2 same-name counts · School cleaning · LC insurance example",
+ tags:"duplicates data quality survivor row_number group by having orphan keys profiling cleaning dedupe",
+ keys:["Find duplicate keys with GROUP BY key HAVING COUNT(*) > 1. Check composite keys, not just single columns.",
+  "Choose a survivor rule before deleting anything: newest update time, highest source priority, most complete record.",
+  "A uniqueness test on names is not an identity test for people.",
+  "Profile for the other defects too: NULLs in required fields, orphan foreign keys, impossible ranges, overlapping effective periods, inconsistent category spellings.",
+  "Record what you excluded or repaired. A cleaning step with no audit trail is not reproducible."],
+ code:[{lab:"Find them, then keep one survivor",sql:`SELECT customer_id, COUNT(*) AS copies
+FROM   customers GROUP BY customer_id HAVING COUNT(*) > 1;
+
+WITH ranked AS (
+    SELECT c.*,
+           ROW_NUMBER() OVER (PARTITION BY customer_id
+                              ORDER BY updated_at DESC, source_row_id) AS rn
+    FROM   customers c
+)
+SELECT * FROM ranked WHERE rn = 1;    -- DELETE FROM ... WHERE rn > 1 needs a stable row identity`}],
+ traps:[["Blanket DISTINCT","It can conceal a broken join and delete legitimately repeated events at the same time."],
+  ["No tie-breaker in the survivor rule","Two rows with the same updated_at make the survivor arbitrary, and the result changes between runs."]],
+ practice:"Keep the newest customer record per customer ID; report duplicated location pairs and repeated insurance values separately.",
+ approach:"Rank within the key by recency with a deterministic tie-breaker and keep rank 1. Report duplicates as their own result set before removing anything, and distinguish 'the same pair appears twice' from 'two different rows happen to share one value'.",
+ mastery:"Explain why a blanket DISTINCT can conceal a broken join or remove meaningful events."},
+
+{n:25,p:"P2",pf:"P2",c:"Add",t:"All, any, and relational division",
+ sum:"Every required thing is a double negative: no required thing is missing.",
+ src:"Build from W3 subqueries and set operators",
+ tags:"relational division all any every not exists double negation universal quantifier requirements vacuous truth",
+ keys:["'Bought every required product' equals 'there is no required product this customer did not buy'. That is two nested NOT EXISTS.",
+  "The counting alternative: COUNT(DISTINCT matched required items) = the number of required items.",
+  "Restrict the count to the required set. Three unrelated purchases do not satisfy three requirements.",
+  "Handle duplicate purchases with DISTINCT inside the count, not with DISTINCT over the whole result.",
+  "Decide what an empty requirement set should mean. Double negation makes everyone qualify, which may or may not be what the business wants."],
+ code:[{lab:"Enrolled in every mandatory activity",sql:`SELECT s.student_id
+FROM   students s
+WHERE  NOT EXISTS (
+    SELECT 1 FROM activities a
+    WHERE  a.is_mandatory = 'Y'
+      AND  NOT EXISTS (SELECT 1 FROM schedule sc
+                       WHERE sc.student_id  = s.student_id
+                         AND sc.activity_id = a.activity_id));`},
+  {lab:"The counting version",sql:`SELECT sc.student_id
+FROM   schedule sc
+JOIN   activities a ON a.activity_id = sc.activity_id AND a.is_mandatory = 'Y'
+GROUP  BY sc.student_id
+HAVING COUNT(DISTINCT sc.activity_id) =
+       (SELECT COUNT(*) FROM activities WHERE is_mandatory = 'Y');`}],
+ traps:[["Did A but never B","is a semi-join and an anti-join together: EXISTS for A, NOT EXISTS for B, both correlated to the same user."],
+  ["COUNT without DISTINCT","Enrolling twice in one mandatory activity then counts as two requirements met."]],
+ practice:"Find students enrolled in every mandatory activity, then students enrolled in at least one optional activity and no prohibited activity.",
+ approach:"Say the sentence in ordinary language first, then translate clause by clause. 'Every' becomes nested NOT EXISTS, 'at least one' becomes EXISTS, 'none' becomes NOT EXISTS.",
+ mastery:"Explain the logic in ordinary language before writing the nested query."},
+
+{n:26,p:"P1",pf:"P1",c:"Present",t:"Table creation and integrity constraints",
+ sum:"Constraints are the rules the database enforces so your queries do not have to.",
+ src:"W4 pp. 3-18 · W4 homework · Deck 11-16",
+ tags:"create table alter table primary key foreign key unique not null check default composite constraint identity ctas",
+ keys:["A CHECK constraint accepts NULL, because UNKNOWN is not a violation. Pair it with NOT NULL when the value is required.",
+  "A composite UNIQUE key allows repeats in each column; separate UNIQUE constraints on the same columns forbid them. They are not the same rule.",
+  "A nullable foreign key is valid with no parent. Add NOT NULL when the relationship is mandatory.",
+  "Referential actions (CASCADE, SET NULL, RESTRICT) decide what a parent delete does. Load parents before children.",
+  "CREATE TABLE AS SELECT copies data, not indexes, constraints, defaults or permissions. Identity and sequence values are not gapless."],
+ code:[{lab:"One row per student and activity",sql:`CREATE TABLE schedule (
+    student_id  INTEGER NOT NULL REFERENCES students(student_id),
+    activity_id INTEGER NOT NULL REFERENCES activities(activity_id),
+    signed_up   DATE    DEFAULT CURRENT_DATE NOT NULL,
+    seat_no     INTEGER CHECK (seat_no > 0),
+    CONSTRAINT pk_schedule PRIMARY KEY (student_id, activity_id)  -- blocks double registration
+);
+
+ALTER TABLE employees ADD CONSTRAINT chk_salary CHECK (salary > 10000);
+-- still allows a NULL salary: add NOT NULL if the value is required`}],
+ traps:[["CHECK does not imply NOT NULL","salary > 10000 passes for a missing salary, because the test is UNKNOWN rather than FALSE."],
+  ["Trusting a copied table","A table built with CTAS has no primary key until you add one, so duplicates can appear immediately."]],
+ practice:"Build Students, Activities and Schedule, deciding which columns together prevent duplicate registrations.",
+ approach:"The bridge table's primary key is the pair of foreign keys. Add a separate surrogate key only if you need a single-column reference elsewhere, and keep the unique constraint on the pair either way.",
+ mastery:"Explain the difference between a composite unique key and separate uniqueness constraints on its columns."},
+
+{n:27,p:"P1",pf:"P1 DML · P2 robust upserts",c:"Extend",t:"INSERT, UPDATE, DELETE, and upserts",
+ sum:"Know what a retry does before you run the statement once.",
+ src:"W4 scripts/homework · Python notebook · Deck 6-8",
+ tags:"insert update delete truncate drop merge upsert on conflict idempotent correlated update rollback",
+ keys:["Always list the columns in an INSERT. Positional inserts break the day someone adds a column.",
+  "An UPDATE with no WHERE updates every row. Preview with a SELECT using the same predicate first.",
+  "A correlated update whose subquery finds no row assigns NULL. Say whether that is intended.",
+  "DELETE removes selected rows and can be rolled back; TRUNCATE empties the table quickly with different transactional and identity behaviour; DROP removes the object.",
+  "Idempotency matters for anything that may be retried. Setting a value is idempotent; adding 30% is not."],
+ code:[{lab:"Correlated update with a stated NULL policy",sql:`UPDATE emp_copy e
+SET    salary = (SELECT MAX(x.salary) FROM emp_copy x
+                 WHERE x.department_id = e.department_id)
+WHERE  e.department_id IS NOT NULL;    -- employees with no department keep their salary`},
+  {lab:"Upsert",sql:`INSERT INTO dim_customer (customer_id, name, updated_at)
+VALUES (42, 'Acme', CURRENT_TIMESTAMP)
+ON CONFLICT (customer_id) DO UPDATE
+SET name = EXCLUDED.name, updated_at = EXCLUDED.updated_at;
+-- Oracle / SQL Server: MERGE ... WHEN MATCHED THEN UPDATE ... WHEN NOT MATCHED THEN INSERT
+-- MySQL: INSERT ... ON DUPLICATE KEY UPDATE`}],
+ traps:[["The subquery that matches nothing","Without the WHERE guard, every employee with a NULL department has their salary wiped to NULL."],
+  ["MERGE with a non-unique source","If the source produces two rows per key, the merge is non-deterministic or errors. De-duplicate the source first."]],
+ practice:"Update a copied employee table to each department's maximum salary, including a deliberate policy for employees without a department.",
+ approach:"Write the SELECT version first and inspect the affected keys. Then convert to an UPDATE inside a transaction, and state the rule for the NULL department rather than discovering it afterwards.",
+ mastery:"Preview the affected keys, explain the rollback boundary, and show what a retry would do."},
+
+{n:28,p:"P2",pf:"P2",c:"Extend",t:"Views, temporary tables, and materialized views",
+ sum:"Four ways to reuse a query, differing in lifetime, freshness and cost.",
+ src:"W4 week 8 script · Deck 37-38",
+ tags:"view materialized view temporary table cte refresh freshness persistence updatable security",
+ keys:["A view is a stored query definition. It runs against the base tables every time, so it is always fresh and never free.",
+  "A CTE lives for one statement; a temporary table for a session; a view indefinitely; a materialized view until the next refresh.",
+  "A materialized view stores the result: cheaper reads, stale data, and a refresh you now own.",
+  "Updatability through a view depends on the definition and the engine. Aggregates and joins usually block it.",
+  "A view is not automatically a security boundary. Permissions and the execution context decide that."],
+ code:[{lab:"A reusable monthly sales view",sql:`CREATE VIEW monthly_sales AS
+SELECT DATE_TRUNC('month', order_date) AS month,
+       region,
+       SUM(amount) AS revenue,
+       COUNT(*)    AS orders
+FROM   orders
+GROUP  BY DATE_TRUNC('month', order_date), region;
+
+CREATE MATERIALIZED VIEW monthly_sales_mv AS SELECT * FROM monthly_sales;
+REFRESH MATERIALIZED VIEW monthly_sales_mv;   -- freshness is now your responsibility`}],
+ traps:[["Views on views on views","Each layer hides a join, and the optimizer eventually cannot see through the stack."],
+  ["Assuming a view caches","An ordinary view recomputes on every reference, including twice in one query."]],
+ practice:"Design a reusable monthly-sales view, then explain when a materialized version would be appropriate.",
+ approach:"Define the view at one clear grain (month, region). Materialize only when reads are frequent, the base data changes on a known schedule, and stale figures within that window are acceptable to the consumer.",
+ mastery:"Explain how a base-table change becomes visible through each of the four options."},
+
+{n:29,p:"P2",pf:"P2 concepts · P3 implementation",c:"Extend",t:"Procedures, functions, and triggers",
+ sum:"Logic stored in the database: useful, and harder to debug than it looks.",
+ src:"Deck 37-38 · W1 schema objects",
+ tags:"stored procedure function trigger cursor set based exception handling parameters audit side effect",
+ keys:["A procedure performs work and controls transactions; a function returns a value and is usable in a query; a trigger fires as a side effect of a change.",
+  "Prefer set-based statements to row-by-row cursors. A cursor loop is usually a slow rewrite of one UPDATE.",
+  "Stored code reduces round trips and centralises rules, but it is not automatically faster.",
+  "Triggers complicate bulk loads, debugging and recursion, and they run whether or not the caller expects them.",
+  "Use declarative constraints for any rule they can express; save procedural logic for what they cannot."],
+ code:[{lab:"Update and audit in one transaction",sql:`CREATE PROCEDURE archive_order(IN p_order_id INTEGER)
+BEGIN
+    START TRANSACTION;
+        UPDATE orders SET status = 'ARCHIVED' WHERE order_id = p_order_id;
+        INSERT INTO order_audit (order_id, action, acted_at)
+        VALUES (p_order_id, 'ARCHIVE', CURRENT_TIMESTAMP);
+    COMMIT;
+END;
+-- trigger alternative: AFTER UPDATE ON orders FOR EACH ROW INSERT INTO order_audit ...
+-- syntax here is MySQL-flavoured; Oracle, Postgres and SQL Server each differ`}],
+ traps:[["A trigger you forgot about","A bulk load fires it once per row and the load takes hours, or writes a million audit rows."],
+  ["Exceptions and partial work","Without explicit handling, an error mid-procedure can leave the first statement committed and the second not."]],
+ practice:"Explain a procedure that updates a business entity and its audit record atomically, and a trigger-based alternative.",
+ approach:"The procedure makes the atomicity explicit and testable. The trigger guarantees the audit even for writers who bypass the procedure, at the cost of invisible work. Name which property matters more here.",
+ mastery:"State which behaviour is engine-specific, and how you would test the error handling."},
+
+{n:30,p:"P2",pf:"P2",c:"Extend",t:"Transactions, isolation, and concurrency",
+ sum:"ACID protects invariants you have actually declared, not the ones you assumed.",
+ src:"Deck 37 · W1 command families · Python connection operations",
+ tags:"transaction acid commit rollback savepoint autocommit isolation dirty read phantom lost update mvcc deadlock retry",
+ keys:["Atomicity: all or nothing. Consistency: declared constraints hold. Isolation: concurrent transactions do not see each other's partial work. Durability: a commit survives a crash.",
+  "Consistency depends on the constraints you declared and the logic you wrote. ACID does not validate business rules for you.",
+  "The anomalies, in increasing difficulty: dirty read, non-repeatable read, phantom, lost update, write skew.",
+  "Isolation levels trade anomalies against concurrency, and defaults differ by engine. Serializable often means being prepared to retry.",
+  "Under MVCC, readers do not block writers. Locks, deadlocks and retry loops still exist."],
+ code:[{lab:"A transfer, and a race for the last seat",sql:`BEGIN;
+  UPDATE accounts SET balance = balance - 100 WHERE account_id = 1;
+  UPDATE accounts SET balance = balance + 100 WHERE account_id = 2;
+COMMIT;                                  -- both or neither
+
+-- Two people booking the last seat: read-then-write is the race
+SELECT seat_id FROM seats WHERE seat_id = 7 AND booked = 'N' FOR UPDATE;
+UPDATE seats SET booked = 'Y' WHERE seat_id = 7 AND booked = 'N';
+-- then check the affected row count: 0 means somebody else won`}],
+ traps:[["Autocommit surprise","Many clients commit each statement. Your two-statement transfer was never atomic."],
+  ["Check-then-act","SELECT to see if a seat is free, then UPDATE, is not safe on its own. Lock the row, or make the UPDATE itself carry the condition."]],
+ practice:"Explain a funds transfer and two concurrent attempts to book the last available seat.",
+ approach:"Name the invariant (total balance unchanged; at most one booking per seat), name the race, and name the mechanism that protects it: a transaction boundary, a row lock, a unique constraint, or a conditional update whose affected-row count you check.",
+ mastery:"Identify the invariant, the race, and the mechanism that protects it."},
+
+{n:31,p:"P2",pf:"P2",c:"Extend",t:"Indexes and access paths",
+ sum:"An index is a read optimisation paid for on every write.",
+ src:"W4 pp. 38-45",
+ tags:"index b-tree selectivity composite covering index only scan clustered partial filtered expression function based",
+ keys:["A B-tree index supports equality, ranges and ordered retrieval on its leading columns.",
+  "Column order in a composite index matters: equality predicates first, then the range or sort column.",
+  "A covering index answers the query from the index alone, with no table access.",
+  "Selectivity decides usefulness. An index on a column with two distinct values rarely beats a scan.",
+  "Every index slows inserts, updates and deletes, and occupies storage. Index every filtered column is not a strategy."],
+ code:[{lab:"One customer, a date range, newest first",sql:`CREATE INDEX ix_orders_cust_date ON orders (customer_id, order_date DESC);
+
+SELECT order_id, order_date, amount
+FROM   orders
+WHERE  customer_id = 42
+  AND  order_date >= DATE '2024-01-01'
+ORDER  BY order_date DESC
+FETCH  FIRST 20 ROWS ONLY;
+-- equality on the leading column, range and sort on the second: the composite earns its keep`}],
+ traps:[["A function on the filtered column","WHERE EXTRACT(YEAR FROM order_date) = 2024 usually cannot use an index on order_date. Rewrite it as a range, or build an expression index."],
+  ["The left-prefix slogan","Leading columns matter most, but real optimizers can use skip scans and index-only paths. Read the plan instead of reciting the rule."]],
+ practice:"Propose an index for customer-specific orders filtered by date and sorted by recency.",
+ approach:"Lead with the equality column, follow with the date so the range and the ORDER BY are both satisfied, and consider adding the selected columns to make it covering. Then state the write cost you just accepted.",
+ mastery:"Explain how your choice helps reads, what it costs writes, and how you would validate it."},
+
+{n:32,p:"P2",pf:"P2",c:"Add",t:"Execution plans and query tuning",
+ sum:"Tune with plan evidence, not with intuition about query length.",
+ src:"Builds on W4's index introduction",
+ tags:"explain analyze execution plan nested loop hash join merge join scan estimate actual rows spill statistics tuning",
+ keys:["EXPLAIN shows the planned access path; the measured variant (EXPLAIN ANALYZE, actual plan, STATISTICS IO) shows what really happened.",
+  "Read for: scan versus index access, join algorithm, sorts, aggregates, estimated versus actual rows, loop counts, memory and spills.",
+  "Nested loop suits a small outer input with an indexed inner side; hash join suits large unsorted inputs; merge join suits inputs already ordered.",
+  "A large gap between estimated and actual rows points at stale statistics, skew or correlated columns, and everything downstream is then mis-planned.",
+  "Tune by removing rows and columns early, keeping predicates usable, pre-aggregating, and avoiding needless DISTINCT and sorts."],
+ code:[{lab:"Measure, do not guess",sql:`EXPLAIN ANALYZE                       -- Postgres: this RUNS the statement
+SELECT c.customer_id, SUM(oi.qty * oi.unit_price) AS revenue
+FROM   customers   c
+JOIN   orders      o  ON o.customer_id = c.customer_id
+JOIN   order_items oi ON oi.order_id   = o.order_id
+WHERE  o.order_date >= DATE '2024-01-01'
+GROUP  BY c.customer_id;
+
+-- Oracle     : EXPLAIN PLAN FOR ... ; SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+-- SQL Server : SET STATISTICS IO, TIME ON; plus the actual execution plan
+-- MySQL      : EXPLAIN ANALYZE / EXPLAIN FORMAT=JSON`}],
+ traps:[["A measured plan executes the statement","Never run EXPLAIN ANALYZE on an UPDATE or DELETE in production without a transaction you intend to roll back."],
+  ["Tuning the wrong node","The slow operator is the one with the large actual time and row count, not the one that looks complicated."]],
+ practice:"Investigate a query that became slow after a many-to-many join and a large sort.",
+ approach:"Get the measured plan, find the operator where actual rows explode past the estimate, and check whether the join multiplied rows. Pre-aggregate the child before joining, then re-measure and compare the same two numbers.",
+ mastery:"Explain the bottleneck using plan evidence rather than query length or intuition."},
+
+{n:33,p:"P2",pf:"P2",c:"Extend",t:"Normalization and relational design",
+ sum:"Put each fact in one place, then denormalize on purpose if reads demand it.",
+ src:"HR schema diagrams and W4 constraints; formal normalization is an addition",
+ tags:"normalization functional dependency 1nf 2nf 3nf bcnf anomaly denormalization star schema bridge table history",
+ keys:["1NF: one value per cell, no repeating groups and no comma-separated lists. 2NF: no partial dependency on part of a composite key. 3NF: no dependency between non-key columns.",
+  "Anomalies are the symptom: the same fact stored twice can be updated in one place only, inserted nowhere, or lost on delete.",
+  "Many-to-many needs a bridge table. A list in a column is not a relationship.",
+  "Denormalization is a deliberate read optimisation with a consistency cost, not a shortcut.",
+  "Design history rather than overwriting a field when past state matters; for analytics, contrast normalized transactional design with fact and dimension models."],
+ code:[{lab:"Redundancy versus an intentional snapshot",sql:`-- Anomaly: the customer's address repeated on every order row
+-- orders(order_id, customer_id, customer_address, ...)
+--   change of address -> update every historical row, or contradict yourself
+
+-- Normalized: the fact lives once
+-- customers(customer_id, address)
+-- orders(order_id, customer_id, order_date)
+
+-- Intentional snapshot: a different fact, deliberately frozen
+-- orders(order_id, customer_id, order_date, ship_address_at_order)`}],
+ traps:[["Confusing snapshot with redundancy","The address an order shipped to is a historical fact about the order. Keeping it is design, not duplication."],
+  ["Normalizing past the point of usefulness","Analytical models trade joins for scan speed on purpose; the tradeoff is the point."]],
+ practice:"Design customers, orders, order lines, products and price history; justify each table's grain.",
+ approach:"State the grain of each table in one sentence, place every attribute with the entity it actually depends on, and decide where history is recorded rather than overwritten. Price history is a separate table with a validity range, not a column on products.",
+ mastery:"Show the anomaly caused by storing a customer's current address redundantly, then explain when an order-time snapshot is intentional."},
+
+{n:34,p:"P2",pf:"P2 for data engineers · P3 otherwise",c:"Add",t:"Warehouses, incremental loads, and large-scale SQL",
+ sum:"Rerunning yesterday's load must produce exactly yesterday's result.",
+ src:"Not substantially taught in the collection; added to close the gap",
+ tags:"oltp olap columnar star schema fact dimension scd2 surrogate key partition pruning watermark cdc backfill idempotent merge json",
+ keys:["OLTP writes small rows often; OLAP scans large columns rarely. Row storage and column storage follow from that.",
+  "A star schema has one fact table at a declared grain plus dimensions on surrogate keys.",
+  "SCD type 1 overwrites; type 2 adds a new dimension row with a validity range, which is what lets a fact join to the customer as they were.",
+  "Incremental loads need a watermark, a de-duplication rule and a merge that is safe to rerun. Late-arriving rows and backfills break naive appends.",
+  "Partitioning and clustering only help when the query prunes on those columns. Flattening JSON or arrays changes the row count, so re-check the grain after unnesting."],
+ code:[{lab:"Idempotent daily load and an as-of dimension join",sql:`MERGE INTO fact_orders t
+USING (SELECT order_id, amount, updated_at
+       FROM   staging_orders
+       WHERE  updated_at >= :watermark) s
+   ON (t.order_id = s.order_id)
+WHEN MATCHED THEN UPDATE SET t.amount = s.amount, t.updated_at = s.updated_at
+WHEN NOT MATCHED THEN INSERT (order_id, amount, updated_at)
+                      VALUES (s.order_id, s.amount, s.updated_at);
+
+SELECT f.order_id, d.customer_segment
+FROM   fact_orders  f
+JOIN   dim_customer d ON d.customer_id = f.customer_id
+                     AND f.order_ts   >= d.valid_from
+                     AND f.order_ts   <  d.valid_to;   -- the customer as they were then`}],
+ traps:[["Append-only incremental loads","A corrected row arrives twice and is counted twice. Merge on the business key instead of appending."],
+  ["Joining facts to the current dimension","Last month's revenue is then attributed to this month's segment, and the history silently changes."]],
+ practice:"Design a daily order fact load that handles updates and late events without double counting, then join facts to the correct historical customer dimension.",
+ approach:"De-duplicate the source to one row per business key, merge rather than append, keep a watermark with overlap for late arrivals, and join dimensions on the validity range rather than on the current row.",
+ mastery:"Explain how rerunning yesterday's pipeline produces the same correct result."},
+
+{n:35,p:"P2",pf:"P2",c:"Present",t:"SQL from Python and notebooks",
+ sum:"A notebook that only works in its current kernel is not a result.",
+ src:"Python, Magic, Census, School, Project, LC notebooks · Deck 29-36",
+ tags:"python sqlite3 connection cursor execute executemany fetch commit pandas read_sql to_sql sql magic percent sql",
+ keys:["DB-API flow: connect, cursor, execute, fetch, commit, close. The connection owns the transaction; the cursor owns the result.",
+  "Closing a connection does not commit. Unflushed writes are lost, and that is the usual cause of 'my rows disappeared'.",
+  "%sql runs one line, %%sql turns the whole cell into SQL. Both need a connection string first.",
+  "pandas: read_sql_query pulls a result into a DataFrame, to_sql writes one back; watch if_exists and index.",
+  "Aggregate in SQL and return small results. Pulling a million rows to group them in pandas wastes both ends."],
+ code:[{lab:"Load, query with a bound parameter, commit, verify",sql:`import sqlite3, pandas as pd
+
+con = sqlite3.connect("school.db")
+pd.read_csv("schools.csv").to_sql("schools", con, if_exists="replace", index=False)
+
+cur = con.cursor()
+cur.execute("SELECT name, attendance FROM schools WHERE community_area = ?", ("AUSTIN",))
+rows = cur.fetchall()
+
+cur.execute("UPDATE schools SET attendance = ? WHERE school_id = ?", (98.5, 12))
+con.commit()      # closing is NOT committing
+con.close()
+
+# reopen and re-read to prove the write persisted
+print(pd.read_sql_query("SELECT attendance FROM schools WHERE school_id = 12",
+                        sqlite3.connect("school.db")))`,lang:"python"}],
+ traps:[["Same-connection reads prove nothing","Your uncommitted write is visible to you and to nobody else. Reopen the database to verify."],
+  ["Restart-and-run-all","Keep installs and downloads out of the analysis path, or the notebook only runs on the machine that already ran it."]],
+ practice:"Load a small CSV, inspect the created schema, query with a bound parameter, commit a write, and reopen the database to verify persistence.",
+ approach:"Check what to_sql inferred for each column before trusting the types. Bind the parameter rather than formatting it in. Then close, reconnect and re-query, because that is the only proof the data is on disk.",
+ mastery:"Explain why a notebook can show inserted rows on its current connection even though another connection cannot yet see them."},
+
+{n:36,p:"P2",pf:"P2",c:"Extend",t:"SQL injection, permissions, and safe access",
+ sum:"Bind values; allow-list identifiers; grant the least that works.",
+ src:"W1 GRANT/REVOKE overview · Magic parameter example",
+ tags:"sql injection parameter binding prepared statement allow list grant revoke least privilege role masking audit",
+ keys:["Parameters carry values, not identifiers. A table name, a column name or a sort direction cannot be bound.",
+  "For dynamic identifiers, map user input through an allow-list and quote the result. Never concatenate raw input.",
+  "Escaping quotes by hand is not a substitute for binding: encodings, comment syntax and numeric contexts all get around it.",
+  "Least privilege: separate application and administration credentials, grant read-only where reads are all that happen, and revoke what is unused.",
+  "A masking expression for display is not access control. The underlying value is still readable."],
+ code:[{lab:"Bind the value, allow-list the sort",sql:`ALLOWED_SORT = {"name": "name", "recent": "created_at DESC"}
+order_by = ALLOWED_SORT.get(sort_key, "name")          # allow-list, not a parameter
+
+cur.execute(
+    f"SELECT customer_id, name FROM customers WHERE name LIKE ? ORDER BY {order_by}",
+    (f"%{term}%",)                                      # the VALUE is bound
+)`,lang:"python"},
+  {lab:"Least privilege",sql:`CREATE ROLE report_reader;
+GRANT  SELECT ON sales.monthly_sales TO report_reader;
+REVOKE INSERT, UPDATE, DELETE ON sales.orders FROM report_reader;`}],
+ traps:[["String formatting one query 'just this once'","That is the one that reaches production, and LIKE '%' || input || '%' concatenated by hand is still injectable."],
+  ["Admin credentials in the application","A read-only report user cannot drop a table, whatever the bug."]],
+ practice:"Rewrite a string-built customer search using bound parameters and restrict the allowed sort columns.",
+ approach:"Bind every value, including the LIKE pattern, which you build in the host language rather than in SQL text. Map the sort key through a dictionary so only known identifiers can reach the query, and default safely when the key is unknown.",
+ mastery:"Explain why escaping quotes manually is not a robust replacement for parameter binding."},
+
+{n:37,p:"P1",pf:"P1",c:"Present",t:"Metadata and unfamiliar-schema exploration",
+ sum:"Ask the database what it has; do not assume the business description.",
+ src:"School metadata section · W4 all_indexes examples",
+ tags:"metadata catalog information_schema sqlite_master pragma table_info profiling distinct null percentage exploration",
+ keys:["Discover objects through the catalog: information_schema views in most engines, sqlite_master and PRAGMA_TABLE_INFO in SQLite, ALL_TAB_COLUMNS and ALL_INDEXES in Oracle.",
+  "Never assume column names, types or nullability from a business description or a tutorial.",
+  "Profile before querying: row count, distinct key count, NULL percentage, min and max, and a handful of sample values.",
+  "Identify what a table holds: snapshots, events, summary rows, or a mix of grains in one table.",
+  "Join on stable keys. Similar-looking names are not unique and not reliable."],
+ code:[{lab:"What is in here?",sql:`-- SQLite
+SELECT name FROM sqlite_master WHERE type = 'table';
+SELECT name, type, "notnull", pk FROM PRAGMA_TABLE_INFO('schools');
+
+-- Most other engines
+SELECT table_name, column_name, data_type, is_nullable
+FROM   information_schema.columns
+WHERE  table_schema = 'public'
+ORDER  BY table_name, ordinal_position;
+
+-- Profile before trusting
+SELECT COUNT(*)                                             AS rows,
+       COUNT(DISTINCT school_id)                            AS distinct_keys,
+       SUM(CASE WHEN attendance IS NULL THEN 1 ELSE 0 END)  AS null_attendance,
+       MIN(enrolment), MAX(enrolment)
+FROM   schools;`}],
+ traps:[["length(type) in SQLite metadata","It measures the length of the type name, 'TEXT' being 4. It is not a column length limit."],
+  ["Distinct keys below row count","The column you assumed was the primary key is not unique. Find the real key before joining on it."]],
+ practice:"Inspect an unknown schools dataset and establish the key, the attendance type, and the join relationship to community areas.",
+ approach:"List the columns and types from the catalog, then profile: compare COUNT(*) with COUNT(DISTINCT candidate_key), check how attendance is stored, and test the join key by counting matched and unmatched rows in both directions.",
+ mastery:"Explain why length(type) in SQLite metadata measures the type-name string, not the allowed length of column values."},
+
+{n:38,p:"P1",pf:"P1",c:"Extend",t:"SQL dialects and portability",
+ sum:"The logic transfers. The syntax does not. Know which engine you are on.",
+ src:"Oracle W1-W4 · SQLite labs · DuckDB LC · MySQL and Db2 examples in the Deck",
+ tags:"dialect portability oracle mysql postgres sqlite duckdb sql server limit fetch concat datediff to_char to_date quoting",
+ keys:["The usual divergences: row limiting, date arithmetic, string concatenation, casting, regex, NULL ordering, upserts, identifier quoting and window filtering.",
+  "Oracle TO_CHAR formats a date into text; TO_DATE parses text into a date. Reaching for TO_DATE to get a weekday name is a common exam error.",
+  "DuckDB date_diff takes a part, a start and an end: date_diff('day', d1, d2). MySQL DATEDIFF takes two arguments in the opposite order.",
+  "Check your engine's version, not just its name; window functions, CTEs and QUALIFY arrived in different releases.",
+  "Mixed-dialect notes are useful for comparison and unsafe to copy verbatim."],
+ code:[{lab:"The portability table worth memorising",sql:`-- row limiting   Oracle/Db2: FETCH FIRST n ROWS ONLY | Postgres/MySQL/SQLite/DuckDB: LIMIT n | T-SQL: TOP n
+-- concatenation  standard/Oracle: a || b            | MySQL: CONCAT(a, b)                  | T-SQL: a + b
+-- date diff      DuckDB: date_diff('day', d1, d2)   | MySQL: DATEDIFF(d2, d1)              | Oracle: d2 - d1
+-- format a date  Oracle: TO_CHAR(d, 'DAY')          | Postgres: to_char(d, 'DAY')          | MySQL: DATE_FORMAT(d, '%W')
+-- parse text     Oracle: TO_DATE('2005-01-01', 'YYYY-MM-DD')
+-- upsert         Postgres/SQLite: ON CONFLICT       | Oracle/T-SQL: MERGE                  | MySQL: ON DUPLICATE KEY UPDATE
+-- null ordering  Postgres/Oracle: NULLS FIRST|LAST  | MySQL/SQLite: fixed, sort a flag first
+-- window filter  Snowflake/DuckDB/BigQuery: QUALIFY | everyone else: wrap it in a CTE
+-- quoting        standard: "Column"                 | MySQL: backtick                       | T-SQL: [Column]`}],
+ traps:[["Two-argument DATEDIFF inside DuckDB","It is not the same function. Use the three-argument form or a typed date range."],
+  ["Copying a saved query to a new engine","Check the limiting clause, the date arithmetic and the concatenation before promising it runs."]],
+ practice:"Translate a top-N-per-department query and a monthly date filter between your primary engine and one other engine.",
+ approach:"Keep the logic (partition, order, rank, filter) fixed and change only the surface: the limiting clause, the date boundary syntax and the concatenation operator. Then state the assumptions you just made about the target version.",
+ mastery:"Identify the dialect assumptions before promising that a saved query will run."},
+
+{n:39,p:"P1",pf:"P1",c:"Extend",t:"Query testing and debugging",
+ sum:"Executing without error is not evidence of a correct answer.",
+ src:"Saved notebook outputs and the corrections table in the study guide",
+ tags:"testing debugging edge cases ties nulls duplicates empty input reconciliation intermediate cte counterexample",
+ keys:["Build a small adversarial fixture: ties, NULLs, unmatched keys, duplicates, a missing date, an empty input and boundary values.",
+  "Check the output grain first, then reconcile counts and totals against a source you trust.",
+  "Materialise intermediate CTEs one at a time to find where rows disappear or multiply.",
+  "Classify the failure: syntax, type, cardinality, or metric definition. Only the first one announces itself.",
+  "Matching one sample output is weak evidence. Compare two formulations on the same hostile data."],
+ code:[{lab:"A three-employee department that breaks the answer",sql:`CREATE TABLE t_emp (employee_id INTEGER, department_id INTEGER, salary INTEGER);
+INSERT INTO t_emp VALUES (1, 10, 3000), (2, 10, 3000), (3, 10, 3000), (4, 20, NULL);
+
+SELECT employee_id, department_id, salary,
+       DENSE_RANK() OVER (PARTITION BY department_id ORDER BY salary)                AS dr,
+       ROW_NUMBER() OVER (PARTITION BY department_id ORDER BY salary, employee_id)   AS rn
+FROM   t_emp;
+-- 'bottom three' now returns three rows by rn and one rank group by dr.
+-- Which did the prompt actually ask for? And where did employee 4 go?`}],
+ traps:[["Testing only the happy path","The sample data in a course rarely contains the tie that breaks the query."],
+  ["Trusting a saved answer key","The correction list in this page came from exactly such answers."]],
+ practice:"Create a three-employee department with tied salaries and demonstrate why the W4 bottom-three answer needs correction.",
+ approach:"Load the fixture, run both the DENSE_RANK and ROW_NUMBER formulations, and show the row counts differ. Then add the NULL-salary employee and show which formulation drops them silently.",
+ mastery:"Propose at least three cases that could disprove your own solution before accepting it."},
+
+{n:40,p:"P1",pf:"P1",c:"Add",t:"Problem solving and communication",
+ sum:"Say the grain, the keys and the metric out loud before you type.",
+ src:"An explicit workflow; apply it to every exercise",
+ tags:"communication interview workflow grain assumptions explain approach edge case performance clarity aliases",
+ keys:["Open by naming input grain, output grain, keys and the exact metric. Most wrong answers are wrong here, not in the syntax.",
+  "Clarify ties, missing values, date boundaries and whether unmatched entities must still appear.",
+  "Describe a short approach, write a correct baseline, inspect intermediate results, and discuss performance only when asked.",
+  "Explain why each join and each aggregation exists. Meaningful aliases and staged CTEs do most of that work for you.",
+  "If you forget syntax, state the operation you intend and adapt it. Do not hide uncertainty behind a complicated query."],
+ code:[{lab:"The sentence to write before the SQL",sql:`Input grain    : one row per ______________
+Output grain   : one row per ______________
+Population     : ______________   Event: ______________   Window: ______________
+Numerator      : ______________   Denominator: ______________
+Ties           : keep all / pick one by ______________
+NULLs          : exclude / treat as ______________
+Unmatched rows : keep at zero / drop
+Then: baseline query -> inspect stages -> one adversarial test -> performance note`}],
+ traps:[["Answering a different question fluently","A beautiful query at the wrong grain is still wrong. Restate the ask before coding."],
+  ["Silent assumptions","Say which facts come from the schema and which are your assumptions. Reviewers can only check what you state."]],
+ practice:"Solve an unseen prompt aloud in 15-20 minutes, including an edge-case test and one performance consideration.",
+ approach:"Two minutes clarifying, three minutes on approach, ten minutes writing and inspecting stages, and the rest on one adversarial case plus a performance remark. Keep talking through the grain as you go.",
+ mastery:"Another person should be able to reconstruct your reasoning and the meaning of every output row."}
+];
+
+const STAGES = [
+ {k:"FROM / JOIN",s:"1",d:"Rows are assembled first. Every join multiplies or preserves rows here, before any filter has run — which is why a fan-out inflates totals no matter what your WHERE clause says. On an outer join, the ON clause decides what <em>matches</em>; unmatched left rows survive this stage with NULLs."},
+ {k:"WHERE",s:"2",d:"Individual rows are tested. No aggregates are available yet, because no groups exist — that is the whole reason <code>WHERE COUNT(*) &gt; 1</code> fails. A predicate on the right table of an outer join placed here deletes the preserved NULL rows, silently turning it into an inner join."},
+ {k:"GROUP BY",s:"3",d:"Surviving rows collapse into groups. The grouping columns become the grain of everything downstream, and NULL forms its own group. Any non-aggregated column in the SELECT list must be functionally determined by this key."},
+ {k:"HAVING",s:"4",d:"Groups are tested, so aggregates are available here and row-level columns are not. If your filter is about a row, it belongs in WHERE; if it is about a group, it belongs here. NULL aggregates from empty groups evaluate to UNKNOWN and drop out."},
+ {k:"Window",s:"5",d:"Window functions run over the grouped result, so they can see aggregates but cannot be filtered at this level. That is why a rank always needs an outer query, a CTE, or QUALIFY where the engine supports it."},
+ {k:"SELECT",s:"6",d:"Expressions are projected and DISTINCT is applied to the whole output row — never to one column in isolation. Column aliases are created here, which is why most engines cannot see them back in WHERE."},
+ {k:"ORDER BY",s:"7",d:"The only clause that creates presentation order. A window ORDER BY, a CTE ORDER BY or a previously saved result guarantees nothing about the final order. Add a unique tie-breaker when the answer must be reproducible."},
+ {k:"LIMIT",s:"8",d:"Rows are cut last. With ties at the boundary, the cut is arbitrary unless the ORDER BY is fully deterministic — the reason a plain LIMIT 5 is not a top-five query."}
+];
+
+const PATTERNS = [
+{id:"A",t:"Top three distinct salary levels per department",
+ why:"DENSE_RANK keeps every employee at the top three salary levels. For exactly three people, switch to ROW_NUMBER ordered by salary DESC, employee_id.",
+ sql:`WITH ranked AS (
+    SELECT employee_id, department_id, salary,
+           DENSE_RANK() OVER (
+               PARTITION BY department_id
+               ORDER BY salary DESC
+           ) AS salary_rank
+    FROM   employees
+    WHERE  salary IS NOT NULL
+)
+SELECT employee_id, department_id, salary
+FROM   ranked
+WHERE  salary_rank <= 3
+ORDER  BY department_id, salary DESC, employee_id;`},
+{id:"B",t:"Departments with zero or more qualifying employees",
+ why:"The filter lives in ON so unmatched departments survive, and COUNT takes the child key so a preserved row scores 0 instead of 1.",
+ sql:`SELECT d.department_id, d.department_name,
+       COUNT(e.employee_id) AS qualifying_employees
+FROM   departments d
+LEFT   JOIN employees e
+  ON   e.department_id = d.department_id
+ AND   e.salary > 5000
+GROUP  BY d.department_id, d.department_name;`},
+{id:"C",t:"Anti join with an explicit missing-manager policy",
+ why:"The IS NOT NULL test separates 'no manager assigned' from 'assigned manager absent from the table'. NOT IN here would return nothing at all.",
+ sql:`SELECT e.employee_id
+FROM   employees e
+WHERE  e.salary < 30000
+  AND  e.manager_id IS NOT NULL
+  AND  NOT EXISTS (
+      SELECT 1
+      FROM   employees m
+      WHERE  m.employee_id = e.manager_id
+  );`},
+{id:"D",t:"Latest historical job and its historical title",
+ why:"Rank the history rows, keep rank 1, and join the title through the history row's job_id — not the employee's current job_id.",
+ sql:`WITH history AS (
+    SELECT jh.*,
+           ROW_NUMBER() OVER (
+               PARTITION BY employee_id
+               ORDER BY end_date DESC, start_date DESC, job_id
+           ) AS rn
+    FROM   job_history jh
+)
+SELECT e.employee_id, e.first_name, e.last_name,
+       j.job_title, h.start_date, h.end_date
+FROM   employees e
+JOIN   history h ON h.employee_id = e.employee_id AND h.rn = 1
+JOIN   jobs    j ON j.job_id      = h.job_id
+WHERE  e.commission_pct IS NULL;   -- CURRENT commission status, not historical`},
+{id:"E",t:"Conditional counts by year (Oracle)",
+ why:"Conditional aggregation pivots in one pass. COUNT ignores the NULL from an unmatched CASE, so no ELSE is needed.",
+ sql:`SELECT EXTRACT(YEAR FROM hire_date) AS hire_year,
+       COUNT(CASE WHEN department_id = 20 THEN 1 END) AS dept_20,
+       COUNT(CASE WHEN department_id = 50 THEN 1 END) AS dept_50,
+       COUNT(CASE WHEN department_id = 80 THEN 1 END) AS dept_80,
+       COUNT(CASE WHEN department_id = 90 THEN 1 END) AS dept_90
+FROM   employees
+GROUP  BY EXTRACT(YEAR FROM hire_date)
+ORDER  BY hire_year;`},
+{id:"F",t:"A full-partition LAST_VALUE",
+ why:"Without the explicit frame, LAST_VALUE stops at the current row. This returns one highest-paid employee per department, not all tied ones.",
+ sql:`SELECT employee_id, department_id, salary,
+       LAST_VALUE(employee_id) OVER (
+           PARTITION BY department_id
+           ORDER BY salary, employee_id
+           ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+       ) AS highest_salary_employee_id
+FROM   employees
+WHERE  salary IS NOT NULL;`},
+{id:"G",t:"Seven calendar days after daily aggregation",
+ why:"Precondition: exactly one row per calendar day in the span. The COUNT check proves seven rows, not seven consecutive dates — join a date spine when days can be missing.",
+ sql:`WITH daily AS (
+    SELECT visited_on, SUM(amount) AS revenue
+    FROM   customer
+    GROUP  BY visited_on
+), rolled AS (
+    SELECT visited_on,
+           SUM(revenue) OVER (
+               ORDER BY visited_on
+               ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+           ) AS revenue_7d,
+           COUNT(*) OVER (
+               ORDER BY visited_on
+               ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+           ) AS days_in_frame
+    FROM   daily
+)
+SELECT visited_on, revenue_7d,
+       ROUND(revenue_7d / 7.0, 2) AS average_daily_revenue
+FROM   rolled
+WHERE  days_in_frame = 7
+ORDER  BY visited_on;`},
+{id:"H",t:"Ranking interpreted across departments",
+ why:"Partitioning by job alone ranks each job across the whole company. Add department to the partition only if the comparison is within each job-and-department pair.",
+ sql:`SELECT e.employee_id, e.first_name, e.last_name,
+       j.job_title, d.department_name, e.salary,
+       DENSE_RANK() OVER (
+           PARTITION BY e.job_id
+           ORDER BY e.salary DESC
+       ) AS salary_rank
+FROM   employees e
+JOIN   jobs j ON j.job_id = e.job_id
+LEFT   JOIN departments d ON d.department_id = e.department_id
+WHERE  e.salary IS NOT NULL
+ORDER  BY j.job_title, salary_rank, e.employee_id;`}
+];
+
+const FIXES = [
+{s:"Theory photo, Q2",t:8,b:"TO_DATE is circled as the way to obtain the day of the week.",f:"TO_DATE parses text into a date. To get a weekday name in Oracle use TO_CHAR(date_value, 'DAY'). Day names are locale-dependent."},
+{s:"Theory photo, Q5",t:14,b:"The circled answer says UNION retains duplicate values.",f:"That is UNION ALL. UNION removes duplicate result rows."},
+{s:"Final_Exam.sql, Q3",t:21,b:"The historical job episode is selected, but jobs is joined using the employee's current e.job_id.",f:"Join the historical title with jh.job_id = j.job_id. Define a tie rule for equal latest end dates, and note that current commission status does not prove historical commission status."},
+{s:"Final_Exam.sql, Q7",t:18,b:"The answer ranks by both job title and department name.",f:"Correct for a job-and-department comparison. If the prompt means ranking within each job across departments, partition by job ID only. Prefer stable IDs to names."},
+{s:"W1 homework Q8",t:3,b:"Prompt says first OR last name starts with S; the answer uses AND.",f:"Use OR, and parenthesise the pair before adding the other conditions."},
+{s:"W1 homework Q9",t:6,b:"LIKE '___b%' is used for 'b after the third character'.",f:"That pattern forces b into position four. For b anywhere after position three use LIKE '___%b%' or a substring-position test."},
+{s:"W1 case study Q3",t:2,b:"The requested salary is missing from the projection.",f:"Include salary in the SELECT list even though it already appears in WHERE. Filtering is not projecting."},
+{s:"W1 Q8/Q12, W2 case Q2",t:8,b:"'After year X' is implemented as the beginning of year X, or as >= X.",f:"Clarify the wording. For after the entire year, start at 1 January of X+1."},
+{s:"W1 date-range answers",t:8,b:"Year-end date literals miss events later on the final day.",f:"Use >= year_start AND < next_year_start. An Oracle DATE can carry a time component."},
+{s:"W1 case study Q11",t:5,b:"hire_date LIKE '__-JAN-__' relies on implicit date formatting.",f:"Use EXTRACT(MONTH FROM hire_date) = 1 or a typed date range. Text patterns on dates depend on session format settings."},
+{s:"W1 lecture p. 40",t:13,b:"The employee/manager example joins identical employee IDs.",f:"Use e.manager_id = m.employee_id. Joining an employee ID to itself finds the employee, not the manager."},
+{s:"W1 lecture p. 53",t:3,b:"The text implies both statuses are restricted to customer 44, but the expression has no parentheses.",f:"Write (status = 'Canceled' OR status = 'Pending') AND customer_id = 44."},
+{s:"W2 case study Q1",t:8,b:"The saved answer changes the lookback from 15 to 25 years and subtracts year numbers.",f:"Restore the requested interval and compare actual dates. Subtracting year numbers is not exact tenure."},
+{s:"W2 case study Q8",t:23,b:"The answer counts spring and autumn hires and calls it an average headcount.",f:"Define the denominator and the observation periods first. Hire records alone establish neither headcount nor departures."},
+{s:"W3 lecture p. 13",t:39,b:"The text says a historical job lasted less than six months; the query uses > 6.",f:"Align the inequality with the intended question, then test it on a boundary value of exactly six."},
+{s:"W3 case study Q1-2",t:13,b:"Job-history entries are treated as promotions.",f:"State it as a dataset assumption. A job change is not necessarily a promotion."},
+{s:"W3 homework Q5",t:9,b:"COUNT(*) counts all joined employee rows, and HAVING SUM(commission_pct) IS NOT NULL only filters departments.",f:"Use COUNT(e.commission_pct) for commissioned employees, and define separately whether the average salary covers all employees or only commissioned ones."},
+{s:"W4 case study Q3",t:18,b:"DENSE_RANK < 3 is used for 'the bottom three'.",f:"That selects two distinct salary levels and possibly many employees. For exactly three employees use ROW_NUMBER <= 3 with a tie-breaker; for three salary levels use DENSE_RANK <= 3."},
+{s:"W4 p. 33 and week 8 script",t:19,b:"LAST_VALUE is described as the final or highest-salary row while using its default frame.",f:"Add ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING and a deterministic ORDER BY."},
+{s:"W4 homework Q10",t:26,b:"CHECK(salary > 10000) is treated as making salary mandatory.",f:"A CHECK accepts NULL because UNKNOWN is not a violation. Add NOT NULL when the value is required."},
+{s:"W4 correlated update",t:27,b:"A NULL department has no equality match in the update's subquery.",f:"Decide whether to keep the salary, assign NULL, or apply a separate rule. Do not change it by accident."},
+{s:"LC cell 8",t:38,b:"Two-argument MySQL-style DATEDIFF is used inside duckdb.sql.",f:"Use DuckDB's three-argument date_diff('day', start, end), or a direct typed date range."},
+{s:"LC cell 5",t:35,b:"A SQL expression sits in a standalone Python cell, outside any SQL string or magic.",f:"Move it into the query. It is not valid Python."},
+{s:"LC cell 30",t:20,b:"Six daily self joins assume the intervening days exist; only the sixth prior day is checked.",f:"Aggregate to daily grain and use one rolling window, with a date spine or an explicit missing-day rule."},
+{s:"School metadata cell 20",t:37,b:"length(type) is presented alongside column type and length.",f:"It measures the type name, so 'TEXT' is 4. It is neither storage length nor a VARCHAR limit."},
+{s:"School attendance examples",t:5,b:"Attendance is sorted while still formatted as text.",f:"Clean and cast before sorting, not only before filtering: '100' sorts before '20' as text."},
+{s:"Week4_Insert_Update notebook",t:35,b:"No explicit commit appears before the final connection close.",f:"Make the transaction policy explicit and verify writes after reopening. Same-connection reads do not demonstrate persistence."},
+{s:"Deck slide 32",t:35,b:"The summary confuses DB-API with cell magics.",f:"DB-API uses connection and cursor objects. The %% prefix denotes a notebook cell magic, which is a different thing."},
+{s:"Deck slide 37",t:30,b:"Isolation is described as preventing any other process from changing data.",f:"Learn the actual isolation-level guarantees and the concurrency control your engine uses."},
+{s:"W2 type notes, W4 appendix",t:5,b:"Byte-per-character claims and old MySQL/MariaDB comparisons are presented as general rules.",f:"Learn type semantics for your actual target engine. Historic implementation limits are not SQL facts."}
+];
+
+const PHASES = [
+{n:"Phase 1",t:"Foundation",d:"Work W1 and W2 plus the simpler Chicago exercises. Move on when you can explain NULL behaviour and aggregate grain without trial and error.",ts:[1,2,3,4,5,6,7,8,9,10,37,38]},
+{n:"Phase 2",t:"Relational reasoning",d:"Work W3 and the final exam's joins and subqueries. Require correct handling of duplicates and unmatched rows.",ts:[11,12,13,14,15,16,24,25]},
+{n:"Phase 3",t:"Analytical SQL",d:"Work W4, the LeetCode notebook and exam Q6-7. Require correct ties, frames, date boundaries and denominators.",ts:[17,18,19,20,21,22,23]},
+{n:"Phase 4",t:"Practical database work",d:"Writes, transaction boundaries, access paths and Python integration. Inspect at least one real execution plan.",ts:[26,27,28,29,30,31,32,35,36]},
+{n:"Phase 5",t:"Role extension",d:"Add the modelling and scale topics your role needs, then finish with topic 40 and keep reusing topic 39.",ts:[33,34,39,40]}
+];
+
+const ROLES = [
+{r:"Data / BI analyst",ts:[8,9,10,11,12,14,17,18,19,20,21,23,24,33],
+ note:"Aggregation, joins, windows, dates, metric definitions and data quality. Then cohorts, pivots, weighted metrics, report reconciliation and star schemas."},
+{r:"Data scientist",ts:[9,15,17,18,19,20,21,22,23,25,39],
+ note:"All analytical querying plus event populations and observation windows: experiment assignment joins, leakage avoidance, retention and funnels, eligibility rules."},
+{r:"Analytics / data engineer",ts:[12,16,24,26,27,28,31,32,33,34,37,38],
+ note:"Query correctness, modelling, DML, plans and large-scale SQL: incremental loads, idempotency, SCD2, partitioning, schema evolution, JSON and arrays."},
+{r:"Backend developer",ts:[4,15,26,27,29,30,31,32,36,38],
+ note:"Constraints, transactions, indexing and parameterisation. Then concurrency races, upserts, migrations, connection pooling and pagination."},
+{r:"SQL / database developer",ts:[28,29,30,31,32,33,38,39],
+ note:"Procedures, execution plans, indexes and transaction internals, plus engine-specific functions, triggers, plan stability and complex tuning."},
+{r:"DBA",ts:[26,29,30,31,32,36,37],
+ note:"Engine operations on top of SQL: backup and restore, recovery objectives, replication, availability, monitoring, capacity and permissions. Largely outside this collection."}
+];
+
+const READY = [
+{c:"Explain a query",e:"State the input and output grain and the logical order clearly.",t:2},
+{c:"Join and aggregate",e:"Preserve zero-count entities and avoid multiplication.",t:11},
+{c:"Find top N",e:"Handle ties exactly as the prompt requested.",t:18},
+{c:"Work with dates",e:"Use correct boundaries and a defined timezone.",t:8},
+{c:"Solve a window problem",e:"Explain the partition, the order and the frame.",t:17},
+{c:"Compute retention",e:"Defend population, numerator, denominator and eligibility.",t:23},
+{c:"Modify data",e:"Explain affected rows, constraints, commit and rollback, and retries.",t:27},
+{c:"Improve performance",e:"Identify a bottleneck from a plan and defend one change.",t:32},
+{c:"Debug an answer",e:"Produce a small counterexample that demonstrates the error.",t:39}
+];
+
+/* ---------------- helpers ---------------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const pad = n => String(n).padStart(2, "0");
+const LABNAME = { join: "join", nulls: "NULL logic", rank: "ranking", frame: "window frame" };
+
+const SQL_KW = "SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|FETCH|FIRST|NEXT|ROWS|ROW|ONLY|TOP|JOIN|LEFT|RIGHT|FULL|INNER|OUTER|CROSS|ON|USING|AND|OR|NOT|IN|IS|NULL|LIKE|GLOB|ESCAPE|BETWEEN|EXISTS|ANY|ALL|SOME|CASE|WHEN|THEN|ELSE|END|AS|DISTINCT|UNION|INTERSECT|EXCEPT|MINUS|WITH|RECURSIVE|OVER|PARTITION|RANGE|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|MERGE|MATCHED|USING|TRUNCATE|CREATE|ALTER|DROP|TABLE|VIEW|MATERIALIZED|INDEX|PROCEDURE|FUNCTION|TRIGGER|CONSTRAINT|PRIMARY|FOREIGN|KEY|UNIQUE|CHECK|DEFAULT|REFERENCES|CASCADE|BEGIN|COMMIT|ROLLBACK|SAVEPOINT|START|TRANSACTION|GRANT|REVOKE|ROLE|EXPLAIN|ANALYZE|ASC|DESC|CAST|DATE|INTERVAL|INTEGER|INT|VARCHAR|DECIMAL|NUMBER|REAL|TEXT|BOOLEAN|TIMESTAMP|IF|CONFLICT|DO|NOTHING|EXCLUDED|QUALIFY|PRAGMA|REFRESH|ADD|COLUMN|FOR|RETURNING|PRIOR|CONNECT";
+const PY_KW = "import|from|def|return|class|with|as|if|elif|else|for|while|in|not|and|or|None|True|False|try|except|finally|lambda|print";
+
+function hl(src, lang) {
+  const py = lang === "python";
+  const comment = py ? "#[^\\n]*" : "--[^\\n]*";
+  const kw = py ? PY_KW : SQL_KW;
+  const re = new RegExp(
+    "(" + comment + ")" +
+    "|('(?:[^']|'')*')" +
+    "|(\"[^\"\\n]*\")" +
+    "|\\b(\\d+(?:\\.\\d+)?)\\b" +
+    "|\\b(" + kw + ")\\b" +
+    "|\\b([A-Za-z_][A-Za-z_0-9]*)(?=\\s*\\()", py ? "g" : "gi");
+  return esc(src).replace(re, (m, c, s1, s2, num, k, fn) => {
+    if (c) return '<span class="c">' + c + "</span>";
+    if (s1 || s2) return '<span class="s">' + (s1 || s2) + "</span>";
+    if (num) return '<span class="n">' + num + "</span>";
+    if (k) return '<span class="k">' + k + "</span>";
+    if (fn) return '<span class="f">' + fn + "</span>";
+    return m;
+  });
+}
+
+let codeSeq = 0;
+const CODE_STORE = {};
+function codeBlock(label, sql, lang) {
+  const id = "c" + (++codeSeq);
+  CODE_STORE[id] = sql;
+  return '<div class="codewrap"><div class="codebar"><span>' + esc(label || (lang === "python" ? "python" : "sql")) +
+    '</span><button class="copy" type="button" data-copy="' + id + '">copy</button></div>' +
+    '<pre class="code">' + hl(sql, lang) + "</pre></div>";
+}
+
+/* ---------------- scores ---------------- */
+let scores = {};
+try { scores = JSON.parse(localStorage.getItem("sql40.scores") || "{}") || {}; } catch (e) { scores = {}; }
+function saveScores() { try { localStorage.setItem("sql40.scores", JSON.stringify(scores)); } catch (e) {} }
+
+function updateProgress() {
+  const total = TOPICS.length * 3;
+  let got = 0;
+  TOPICS.forEach(t => { got += scores[t.n] || 0; });
+  const pct = total ? got / total : 0;
+  const circ = 2 * Math.PI * 33;
+  $("#ringFg").setAttribute("stroke-dasharray", (pct * circ).toFixed(1) + " " + circ.toFixed(1));
+  $("#ringTxt").textContent = Math.round(pct * 100) + "%";
+  $("#scoreLine").textContent = got + " / " + total + " points";
+  TOPICS.forEach(t => {
+    const card = document.getElementById("t" + t.n);
+    if (card) card.classList.toggle("done", (scores[t.n] || 0) === 3);
+  });
+}
+
+/* ---------------- state ---------------- */
+const state = { q: "", p: new Set(), c: new Set(), weak: false, role: null };
+
+function topicMatches(t) {
+  if (state.p.size) {
+    const pr = t.pf.toUpperCase();
+    let hit = false;
+    state.p.forEach(v => { if (pr.indexOf(v) >= 0) hit = true; });
+    if (!hit) return false;
+  }
+  if (state.c.size && !state.c.has(t.c)) return false;
+  if (state.weak && (scores[t.n] || 0) === 3) return false;
+  if (state.role && state.role.ts.indexOf(t.n) < 0) return false;
+  if (state.q) {
+    const hay = (t.t + " " + t.sum + " " + t.tags + " " + t.keys.join(" ") + " " +
+      t.traps.map(x => x[0] + " " + x[1]).join(" ") + " " + t.practice + " " +
+      t.code.map(c => c.lab + " " + c.sql).join(" ")).toLowerCase();
+    if (hay.indexOf(state.q) < 0) return false;
+  }
+  return true;
+}
+
+/* ---------------- topic rendering ---------------- */
+function badgeFor(t) {
+  const pcls = t.p === "P1" ? "b-p1" : t.p === "P2" ? "b-p2" : "b-p3";
+  const ccls = t.c === "Present" ? "b-present" : t.c === "Add" ? "b-add" : "b-extend";
+  return '<span class="badge ' + pcls + '">' + esc(t.pf) + '</span>' +
+    '<span class="badge ' + ccls + '">' + esc(t.c) + "</span>";
+}
+
+function topicBody(t) {
+  let h = '<div class="split"><div class="block">';
+  h += "<h5>What you must be able to say</h5><ul class=\"points\">" +
+    t.keys.map(k => "<li>" + esc(k) + "</li>").join("") + "</ul>";
+  h += "<h5>Where it goes wrong</h5>" +
+    t.traps.map(x => '<div class="trap"><b>' + esc(x[0]) + "</b>" + esc(x[1]) + "</div>").join("");
+  h += '</div><div class="block"><h5>Syntax to write from memory</h5>';
+  h += t.code.map(c => codeBlock(c.lab, c.sql, c.lang)).join("");
+  h += "</div></div>";
+  h += '<div class="prompt"><span class="tag">Practice</span>' + esc(t.practice) +
+    '<details class="rev"><summary>show the approach</summary><div class="ans">' + esc(t.approach) + "</div></details></div>";
+  h += '<div class="prompt mastery"><span class="tag">Mastery check</span>' + esc(t.mastery) + "</div>";
+  h += '<div class="srcline">Sources: ' + esc(t.src) + "</div>";
+  h += '<div class="cardfoot"><span class="scorelab">self-score</span><span class="score" data-score="' + t.n + '">' +
+    [0, 1, 2, 3].map(v => '<button type="button" data-v="' + v + '" aria-pressed="' +
+      ((scores[t.n] || 0) === v ? "true" : "false") + '">' + v + "</button>").join("") + "</span>";
+  if (t.lab) h += '<a class="lablink" href="#labs" data-lab="' + t.lab + '">open the ' + LABNAME[t.lab] + " lab →</a>";
+  h += "</div>";
+  return h;
+}
+
+function renderTopics() {
+  const list = $("#topicList");
+  const open = new Set($$(".card.open").map(c => c.dataset.n));
+  const shown = TOPICS.filter(topicMatches);
+  list.innerHTML = shown.map(t =>
+    '<article class="card' + (open.has(String(t.n)) ? " open" : "") + '" id="t' + t.n + '" data-n="' + t.n + '">' +
+    '<button class="head" type="button" aria-expanded="' + (open.has(String(t.n)) ? "true" : "false") + '">' +
+    '<span class="num">' + pad(t.n) + "</span>" +
+    "<span><span class=\"title\">" + esc(t.t) + '</span><span class="sub">' + esc(t.sum) + "</span></span>" +
+    '<span class="meta">' + badgeFor(t) + '<span class="caret">▸</span></span></button>' +
+    '<div class="body"' + (open.has(String(t.n)) ? "" : " hidden") + ">" + topicBody(t) + "</div></article>"
+  ).join("");
+  $("#empty").hidden = shown.length > 0;
+  $("#count").textContent = shown.length + " of " + TOPICS.length + " topics" +
+    (state.role ? " · " + state.role.r : "");
+  updateProgress();
+}
+
+function setCard(card, open) {
+  card.classList.toggle("open", open);
+  $(".body", card).hidden = !open;
+  $(".head", card).setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+/* ---------------- static sections ---------------- */
+function renderStats() {
+  const n = p => TOPICS.filter(t => t.pf.toUpperCase().indexOf(p) >= 0).length;
+  const c = v => TOPICS.filter(t => t.c === v).length;
+  $("#statRow").innerHTML =
+    '<span class="stat"><b>40</b>topics</span>' +
+    '<span class="stat"><b>' + n("P1") + "</b>are P1 core</span>" +
+    '<span class="stat"><b>' + c("Present") + "</b>well covered by the course</span>" +
+    '<span class="stat"><b>' + c("Extend") + "</b>need more depth</span>" +
+    '<span class="stat"><b>' + c("Add") + "</b>are gaps to close</span>" +
+    '<span class="stat"><b>30</b>known bugs in the source material</span>';
+}
+
+function renderPipe() {
+  $("#pipe").innerHTML = STAGES.map((s, i) =>
+    '<button class="stage" type="button" data-stage="' + i + '" aria-pressed="' + (i === 0) + '">' +
+    "<em>" + s.s + "</em><span>" + esc(s.k) + "</span></button>").join("");
+  showStage(0);
+}
+function showStage(i) {
+  $$("#pipe .stage").forEach((b, j) => b.setAttribute("aria-pressed", String(i === j)));
+  $("#stageNote").innerHTML = "<b>" + esc(STAGES[i].k) + "</b> — " + STAGES[i].d;
+}
+
+function renderPatterns() {
+  $("#patList").innerHTML = PATTERNS.map(p =>
+    '<article class="pat"><div><span class="letter">PATTERN ' + p.id + '</span><h4>' + esc(p.t) + "</h4></div>" +
+    codeBlock("sql", p.sql) + '<p class="why">' + esc(p.why) + "</p></article>").join("");
+}
+
+function renderFixes() {
+  $("#fixCount").textContent = FIXES.length + " corrections from the reviewed material";
+  $("#fixList").innerHTML = FIXES.map(f =>
+    '<article class="fix"><div class="src">' + esc(f.s) + ' · topic ' + pad(f.t) + "</div>" +
+    '<p class="bug">' + esc(f.b) + "</p>" +
+    "<details><summary><span>fix</span></summary><div class=\"fixtext\">" + esc(f.f) + "</div></details></article>").join("");
+}
+
+function renderRoadmap() {
+  $("#phaseList").innerHTML = PHASES.map(p =>
+    '<article class="phase"><div class="step">' + esc(p.n) + "</div><h4>" + esc(p.t) + "</h4><p>" + esc(p.d) + "</p>" +
+    '<div class="tchips">' + p.ts.map(n => '<a class="tchip" href="#t' + n + '" data-jump="' + n + '">' + pad(n) + "</a>").join("") +
+    "</div></article>").join("");
+  $("#roleRow").innerHTML = ROLES.map((r, i) =>
+    '<button class="chip" type="button" data-role="' + i + '" aria-pressed="false">' + esc(r.r) + "</button>").join("");
+}
+
+function renderReady() {
+  $("#readyList").innerHTML = READY.map(r =>
+    '<div class="ready"><em>' + esc(r.c) + "</em><span>" + esc(r.e) +
+    ' <a href="#t' + r.t + '" data-jump="' + r.t + '">topic ' + pad(r.t) + "</a></span></div>").join("");
+}
+
+/* ---------------- labs ---------------- */
+const LABS = [
+  { id: "join", name: "JOIN and filter placement" },
+  { id: "nulls", name: "Three-valued logic" },
+  { id: "rank", name: "Ranking and ties" },
+  { id: "frame", name: "Window frames" }
+];
+let activeLab = "join";
+
+const DEPTS = [{ id: 10, name: "Sales" }, { id: 20, name: "IT" }, { id: 30, name: "Legal" }];
+const EMPS = [
+  { id: 101, name: "Abel", dept: 10, sal: 6000 },
+  { id: 102, name: "Bell", dept: 10, sal: 4000 },
+  { id: 103, name: "Chen", dept: 20, sal: 7000 },
+  { id: 104, name: "Diaz", dept: null, sal: 9000 }
+];
+const DAYS = [
+  { d: "2024-03-01", r: 100 }, { d: "2024-03-02", r: 140 }, { d: "2024-03-03", r: 90 },
+  { d: "2024-03-04", r: 160 }, { d: "2024-03-06", r: 120 }, { d: "2024-03-07", r: 200 },
+  { d: "2024-03-08", r: 130 }
+];
+
+function renderLabTabs() {
+  $("#labTabs").innerHTML = LABS.map(l =>
+    '<button class="tab" type="button" role="tab" data-tab="' + l.id + '" aria-selected="' +
+    (l.id === activeLab) + '">' + esc(l.name) + "</button>").join("");
+}
+
+function renderLab() {
+  renderLabTabs();
+  const pane = $("#labPane");
+  if (activeLab === "join") pane.innerHTML = joinLabShell();
+  if (activeLab === "nulls") pane.innerHTML = nullLabShell();
+  if (activeLab === "rank") pane.innerHTML = rankLabShell();
+  if (activeLab === "frame") pane.innerHTML = frameLabShell();
+  runLab();
+}
+
+function joinLabShell() {
+  return '<div class="labgrid"><div class="ctrl">' +
+    '<div><label for="jType">join type</label><select id="jType">' +
+    ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL OUTER JOIN", "CROSS JOIN"]
+      .map((v, i) => '<option value="' + i + '"' + (i === 1 ? " selected" : "") + ">" + v + "</option>").join("") +
+    "</select></div>" +
+    '<div><label for="jFilter">salary &gt; 5000 filter</label><select id="jFilter">' +
+    '<option value="none">no filter</option><option value="on" selected>in the ON clause</option>' +
+    '<option value="where">in the WHERE clause</option></select></div>' +
+    '<p class="note">3 departments, 4 employees. Legal has nobody; Diaz has no department.</p>' +
+    '</div><div class="labout" id="jOut"></div></div>';
+}
+
+function joinLab() {
+  const type = +$("#jType").value, filt = $("#jFilter").value;
+  const cross = type === 4;
+  const ok = e => filt !== "on" || e.sal > 5000;
+  let rows = [];
+  DEPTS.forEach(d => {
+    EMPS.forEach(e => {
+      if (cross) rows.push({ d: d, e: e });
+      else if (e.dept === d.id && ok(e)) rows.push({ d: d, e: e });
+    });
+  });
+  if (!cross && (type === 1 || type === 3)) {
+    DEPTS.forEach(d => { if (!rows.some(r => r.d && r.d.id === d.id)) rows.push({ d: d, e: null }); });
+  }
+  if (!cross && (type === 2 || type === 3)) {
+    EMPS.forEach(e => { if (!rows.some(r => r.e && r.e.id === e.id)) rows.push({ d: null, e: e }); });
+  }
+  if (filt === "where") rows = rows.filter(r => r.e && r.e.sal > 5000);
+
+  const nul = '<span class="null">NULL</span>';
+  const body = rows.map(r =>
+    "<tr><td>" + (r.d ? r.d.id : nul) + "</td><td>" + (r.d ? r.d.name : nul) + "</td>" +
+    "<td>" + (r.e ? r.e.name : nul) + "</td><td>" + (r.e ? r.e.sal : nul) + "</td></tr>").join("");
+  const cntAll = rows.length, cntKey = rows.filter(r => r.e).length;
+
+  let verdict;
+  if (cross) verdict = "CROSS JOIN ignores any ON condition: " + (DEPTS.length * EMPS.length) + " rows = 3 departments x 4 employees" + (filt === "where" ? ", cut to " + cntAll + " by the WHERE clause" : "") + ". A missing join condition produces exactly this.";
+  else if (filt === "where" && type > 0) verdict = "The WHERE predicate tests the employee columns, and a preserved row has NULL there. Every unmatched row is gone: this outer join now behaves as an inner join.";
+  else if (filt === "on" && (type === 1 || type === 3)) verdict = "Legal survives with NULLs because the filter only limited what matched. COUNT(*) would report " + cntAll + ", COUNT(e.employee_id) reports " + cntKey + " — that difference is the whole reason to count the child key.";
+  else if (type === 0) verdict = "INNER JOIN keeps matched pairs only, so Legal (no employees) and Diaz (no department) never appear.";
+  else if (type === 2) verdict = "RIGHT JOIN preserves employees, so Diaz appears with a NULL department. Most people misread this; reorder the tables and use LEFT instead.";
+  else verdict = "FULL OUTER JOIN preserves both sides: Legal with no employee and Diaz with no department both appear.";
+
+  const sql = "SELECT d.department_id, d.department_name, e.name, e.salary\nFROM   departments d\n" +
+    ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL OUTER JOIN", "CROSS JOIN"][type] + " employees e" +
+    (cross ? "" : "\n  ON   e.department_id = d.department_id") +
+    (filt === "on" && !cross ? "\n AND   e.salary > 5000" : "") +
+    (filt === "where" ? "\nWHERE  e.salary > 5000" : "") + ";";
+
+  $("#jOut").innerHTML =
+    '<div class="tablewrap"><table class="grid"><thead><tr><th>department_id</th><th>department_name</th>' +
+    "<th>name</th><th>salary</th></tr></thead><tbody>" +
+    (body || '<tr><td colspan="4">no rows</td></tr>') + "</tbody></table></div>" +
+    '<div class="verdict">' + cntAll + " row(s) · COUNT(*) = " + cntAll + " · COUNT(e.employee_id) = " + cntKey + "</div>" +
+    '<p class="note">' + verdict + "</p>" + codeBlock("generated sql", sql);
+}
+
+function nullLabShell() {
+  const opts = v => ["TRUE", "FALSE", "NULL"].map(o =>
+    '<option value="' + o + '"' + (o === v ? " selected" : "") + ">" + o + "</option>").join("");
+  return '<div class="labgrid"><div class="ctrl">' +
+    '<div><label for="nA">A</label><select id="nA">' + opts("TRUE") + "</select></div>" +
+    '<div><label for="nB">B</label><select id="nB">' + opts("NULL") + "</select></div>" +
+    '<p class="note">NULL is not a value, it is the absence of one. Comparing to it yields UNKNOWN.</p>' +
+    '</div><div class="labout" id="nOut"></div></div>';
+}
+
+function nullLab() {
+  const val = s => s === "TRUE" ? true : s === "FALSE" ? false : null;
+  const a = val($("#nA").value), b = val($("#nB").value);
+  const show = v => v === null ? '<b class="v-null">UNKNOWN</b>' : v ? '<b class="v-true">TRUE</b>' : '<b class="v-false">FALSE</b>';
+  const AND = (a === false || b === false) ? false : (a === null || b === null) ? null : true;
+  const OR2 = (a === true || b === true) ? true : (a === null || b === null) ? null : false;
+  const NOTA = a === null ? null : !a;
+  const EQ = (a === null || b === null) ? null : a === b;
+  const cell = (lab, v) => '<div class="tcell"><em>' + lab + "</em>" + show(v) + "</div>";
+  $("#nOut").innerHTML = '<div class="truth">' +
+    cell("A AND B", AND) + cell("A OR B", OR2) + cell("NOT A", NOTA) +
+    cell("A = B", EQ) + cell("A IS NULL", a === null) + cell("A IS NOT NULL", a !== null) +
+    "</div>" +
+    '<div class="verdict">WHERE A AND B keeps the row? ' + (AND === true ? "YES" : "NO — only TRUE survives, and this is " + (AND === null ? "UNKNOWN" : "FALSE")) + "</div>" +
+    '<p class="note"><b>The counting rule, on commission_pct = (0.2, NULL, 0.2, NULL, 0.4):</b> ' +
+    "COUNT(*) = 5 counts rows · COUNT(commission_pct) = 3 counts non-NULL values · " +
+    "COUNT(DISTINCT commission_pct) = 2 counts distinct non-NULL values · AVG ignores the NULLs and divides by 3, not 5.</p>" +
+    codeBlock("the safe exclusion", "-- NOT IN goes UNKNOWN as soon as the list contains a NULL\nSELECT * FROM employees e\nWHERE  NOT EXISTS (SELECT 1 FROM departments d\n                   WHERE d.department_id = e.department_id);");
+}
+
+function rankLabShell() {
+  return '<div class="labgrid"><div class="ctrl">' +
+    '<div><label for="rVals">salaries in one department</label>' +
+    '<input id="rVals" type="text" value="5000, 5000, 4800, 4800, 4500, 4200"></div>' +
+    '<div><label for="rCut">cutoff N = <span id="rCutV">3</span></label>' +
+    '<input id="rCut" type="range" min="1" max="6" value="3"></div>' +
+    '<p class="note">Edit the list. Ties are where the three functions stop agreeing.</p>' +
+    '</div><div class="labout" id="rOut"></div></div>';
+}
+
+function rankLab() {
+  const cut = +$("#rCut").value;
+  $("#rCutV").textContent = cut;
+  const vals = $("#rVals").value.split(",").map(s => parseFloat(s.trim()))
+    .filter(v => !isNaN(v)).sort((a, b) => b - a).slice(0, 12);
+  let rows = [], rank = 0, dense = 0, prev = null;
+  vals.forEach((v, i) => {
+    if (v !== prev) { rank = i + 1; dense += 1; prev = v; }
+    rows.push({ v: v, rn: i + 1, rk: rank, dr: dense });
+  });
+  const body = rows.map(r =>
+    "<tr" + (r.dr <= cut ? ' class="inframe"' : "") + "><td>" + r.v + "</td><td>" + r.rn +
+    "</td><td>" + r.rk + "</td><td>" + r.dr + "</td></tr>").join("");
+  const nRow = rows.filter(r => r.rn <= cut).length;
+  const nRank = rows.filter(r => r.rk <= cut).length;
+  const nDense = rows.filter(r => r.dr <= cut).length;
+  $("#rOut").innerHTML =
+    '<div class="tablewrap"><table class="grid"><thead><tr><th>salary</th><th>ROW_NUMBER</th>' +
+    "<th>RANK</th><th>DENSE_RANK</th></tr></thead><tbody>" + body + "</tbody></table></div>" +
+    '<div class="verdict">filter &lt;= ' + cut + " returns: ROW_NUMBER " + nRow + " rows · RANK " + nRank +
+    " rows · DENSE_RANK " + nDense + " rows</div>" +
+    '<p class="note">Highlighted rows are the ones DENSE_RANK &lt;= ' + cut + ' keeps. ' +
+    "<b>Exactly " + cut + " employees</b> means ROW_NUMBER with a unique tie-breaker. <b>The top " + cut +
+    " salary levels</b> means DENSE_RANK. RANK leaves gaps after a tie, which is why RANK &lt;= " + cut +
+    " and DENSE_RANK &lt;= " + cut + " disagree.</p>";
+}
+
+function frameLabShell() {
+  return '<div class="labgrid"><div class="ctrl">' +
+    '<div><label for="fN">ROWS BETWEEN <span id="fNV">2</span> PRECEDING AND CURRENT ROW</label>' +
+    '<input id="fN" type="range" min="0" max="6" value="2"></div>' +
+    '<div><label for="fRow">current row = <span id="fRowV">5</span></label>' +
+    '<input id="fRow" type="range" min="1" max="7" value="5"></div>' +
+    '<p class="note">Seven rows of daily revenue — but 2024-03-05 is missing from the data.</p>' +
+    '</div><div class="labout" id="fOut"></div></div>';
+}
+
+function frameLab() {
+  const n = +$("#fN").value, cur = +$("#fRow").value - 1;
+  $("#fNV").textContent = n; $("#fRowV").textContent = cur + 1;
+  const start = Math.max(0, cur - n);
+  const inFrame = DAYS.slice(start, cur + 1);
+  const sum = inFrame.reduce((a, x) => a + x.r, 0);
+  const days = (new Date(DAYS[cur].d) - new Date(DAYS[start].d)) / 86400000 + 1;
+  const body = DAYS.map((d, i) =>
+    "<tr class=\"" + (i === cur ? "cur" : (i >= start && i < cur ? "inframe" : "")) + '"><td>' + d.d +
+    "</td><td>" + d.r + "</td><td>" + (i >= start && i <= cur ? "in frame" : "") + "</td></tr>").join("");
+  $("#fOut").innerHTML =
+    '<div class="tablewrap"><table class="grid"><thead><tr><th>visited_on</th><th>revenue</th>' +
+    "<th>frame</th></tr></thead><tbody>" + body + "</tbody></table></div>" +
+    '<div class="verdict">SUM = ' + sum + " over " + inFrame.length + " rows · those rows span " + days +
+    " calendar days" + (days !== inFrame.length ? " ← not the same number" : "") + "</div>" +
+    '<p class="note">' + (days !== inFrame.length
+      ? "<b>This is the bug.</b> ROWS counts rows, not days. The frame reaches back " + n +
+        " rows but crosses a missing date, so a '" + inFrame.length + " day average' is really " + days +
+        " calendar days of business. Join a date spine, or use a RANGE frame with an INTERVAL."
+      : "Rows and calendar days agree here — but only because this stretch has no gap. The COUNT check proves the number of rows, never their continuity.") + "</p>" +
+    codeBlock("what the frame means", "SUM(revenue) OVER (ORDER BY visited_on\n                   ROWS BETWEEN " + n +
+      " PRECEDING AND CURRENT ROW)   -- " + (n + 1) + " rows\n\n-- calendar-accurate version, where supported:\nSUM(revenue) OVER (ORDER BY visited_on\n                   RANGE BETWEEN INTERVAL '" + n + " days' PRECEDING AND CURRENT ROW)");
+}
+
+function runLab() {
+  if (activeLab === "join") joinLab();
+  if (activeLab === "nulls") nullLab();
+  if (activeLab === "rank") rankLab();
+  if (activeLab === "frame") frameLab();
+}
+
+/* ---------------- drill ---------------- */
+let drillN = null;
+function openDrill() {
+  const pool = TOPICS.filter(topicMatches);
+  const src = pool.length ? pool : TOPICS;
+  const t = src[Math.floor(Math.random() * src.length)];
+  drillN = t.n;
+  const wrap = document.createElement("div");
+  wrap.className = "scrim"; wrap.id = "drill";
+  wrap.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-label="Practice drill">' +
+    '<div class="qnum">TOPIC ' + pad(t.n) + " · " + esc(t.pf) + "</div><h3>" + esc(t.t) + "</h3>" +
+    '<p class="q">' + esc(t.practice) + "</p>" +
+    '<details class="rev"><summary>show the approach</summary><div class="ans">' + esc(t.approach) +
+    "</div></details>" +
+    '<div class="prompt mastery" style="margin-top:12px"><span class="tag">Mastery check</span>' + esc(t.mastery) + "</div>" +
+    '<div class="modalfoot"><button class="btn" type="button" data-drill="next">another prompt</button>' +
+    '<button class="btn ghost" type="button" data-drill="open">open topic ' + pad(t.n) + "</button>" +
+    '<button class="btn ghost" type="button" data-drill="close">close</button></div></div>';
+  document.body.appendChild(wrap);
+}
+function closeDrill() { const d = $("#drill"); if (d) d.remove(); }
+
+/* ---------------- theme ---------------- */
+function applyTheme(mode) {
+  if (mode) document.documentElement.setAttribute("data-theme", mode);
+  else document.documentElement.removeAttribute("data-theme");
+}
+let themeMode = null;
+try { themeMode = localStorage.getItem("sql40.theme"); } catch (e) {}
+applyTheme(themeMode);
+
+/* ---------------- events ---------------- */
+document.addEventListener("click", ev => {
+  const el = ev.target;
+
+  const copyBtn = el.closest("[data-copy]");
+  if (copyBtn) {
+    const txt = CODE_STORE[copyBtn.dataset.copy] || "";
+    try {
+      navigator.clipboard.writeText(txt).then(() => {
+        copyBtn.textContent = "copied"; setTimeout(() => { copyBtn.textContent = "copy"; }, 1200);
+      }, () => { copyBtn.textContent = "select it"; });
+    } catch (e) { copyBtn.textContent = "select it"; }
+    return;
+  }
+
+  const head = el.closest(".card > .head");
+  if (head) { const card = head.closest(".card"); setCard(card, !card.classList.contains("open")); return; }
+
+  const sc = el.closest(".score button");
+  if (sc) {
+    const n = sc.closest(".score").dataset.score, v = +sc.dataset.v;
+    scores[n] = (scores[n] === v) ? 0 : v;
+    saveScores();
+    $$(".score[data-score='" + n + "'] button").forEach(b =>
+      b.setAttribute("aria-pressed", String(+b.dataset.v === scores[n])));
+    updateProgress();
+    if (state.weak) renderTopics();
+    return;
+  }
+
+  const stage = el.closest("[data-stage]");
+  if (stage) { showStage(+stage.dataset.stage); return; }
+
+  const tab = el.closest("[data-tab]");
+  if (tab) { activeLab = tab.dataset.tab; renderLab(); return; }
+
+  const labLink = el.closest("[data-lab]");
+  if (labLink) { activeLab = labLink.dataset.lab; renderLab(); return; }
+
+  const jump = el.closest("[data-jump]");
+  if (jump) {
+    const n = jump.dataset.jump;
+    const card = document.getElementById("t" + n);
+    if (card) { setCard(card, true); setTimeout(() => card.scrollIntoView({ block: "center", behavior: "smooth" }), 30); }
+    else { state.q = ""; $("#q").value = ""; state.p.clear(); state.c.clear(); state.weak = false; state.role = null;
+      $$(".chips .chip").forEach(c => c.setAttribute("aria-pressed", "false")); renderTopics();
+      const c2 = document.getElementById("t" + n);
+      if (c2) { setCard(c2, true); setTimeout(() => c2.scrollIntoView({ block: "center", behavior: "smooth" }), 30); } }
+    return;
+  }
+
+  const chip = el.closest(".chips .chip[data-f]");
+  if (chip) {
+    const g = chip.closest(".chips").dataset.group, f = chip.dataset.f;
+    const on = chip.getAttribute("aria-pressed") !== "true";
+    chip.setAttribute("aria-pressed", String(on));
+    if (g === "p") { on ? state.p.add(f) : state.p.delete(f); }
+    if (g === "c") { on ? state.c.add(f) : state.c.delete(f); }
+    if (g === "s") { state.weak = on; }
+    renderTopics();
+    return;
+  }
+
+  const role = el.closest("[data-role]");
+  if (role) {
+    const i = +role.dataset.role, on = role.getAttribute("aria-pressed") !== "true";
+    $$("[data-role]").forEach(b => b.setAttribute("aria-pressed", "false"));
+    role.setAttribute("aria-pressed", String(on));
+    state.role = on ? ROLES[i] : null;
+    $("#roleNote").innerHTML = state.role
+      ? '<span class="tag">' + esc(state.role.r) + "</span>" + esc(state.role.note)
+      : "Choose a role to filter the topic list to its emphasis, on top of the P1 core.";
+    renderTopics();
+    if (on) $("#topics").scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  const drill = el.closest("[data-drill]");
+  if (drill) {
+    const a = drill.dataset.drill;
+    closeDrill();
+    if (a === "next") openDrill();
+    if (a === "open") {
+      const card = document.getElementById("t" + drillN);
+      if (card) { setCard(card, true); card.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    }
+    return;
+  }
+
+  if (el.id === "drill") { closeDrill(); return; }
+  if (el.closest("#drillBtn")) { openDrill(); return; }
+  if (el.closest("#themeBtn")) {
+    const dark = document.documentElement.getAttribute("data-theme") === "dark" ||
+      (!document.documentElement.getAttribute("data-theme") &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    themeMode = dark ? "light" : "dark";
+    applyTheme(themeMode);
+    try { localStorage.setItem("sql40.theme", themeMode); } catch (e) {}
+    return;
+  }
+  if (el.closest("#expandAll")) { $$(".card").forEach(c => setCard(c, true)); return; }
+  if (el.closest("#collapseAll")) { $$(".card").forEach(c => setCard(c, false)); return; }
+  if (el.closest("#revealFixes")) {
+    const ds = $$("#fixList details"), openAll = !ds.every(d => d.open);
+    ds.forEach(d => { d.open = openAll; });
+    $("#revealFixes").textContent = openAll ? "hide all fixes" : "reveal all fixes";
+    return;
+  }
+  if (el.closest("#resetScores")) {
+    scores = {}; saveScores(); renderTopics();
+    return;
+  }
+});
+
+document.addEventListener("input", ev => {
+  if (ev.target.id === "q") { state.q = ev.target.value.trim().toLowerCase(); renderTopics(); return; }
+  if (["jType", "jFilter", "rVals", "rCut", "fN", "fRow", "nA", "nB"].indexOf(ev.target.id) >= 0) runLab();
+});
+document.addEventListener("change", ev => {
+  if (["jType", "jFilter", "nA", "nB"].indexOf(ev.target.id) >= 0) runLab();
+});
+document.addEventListener("keydown", ev => {
+  if (ev.key === "/" && document.activeElement.id !== "q") { ev.preventDefault(); $("#q").focus(); }
+  if (ev.key === "Escape") { closeDrill(); if (document.activeElement.id === "q") { $("#q").value = ""; state.q = ""; renderTopics(); } }
+});
+
+/* ---------------- boot ---------------- */
+renderStats();
+renderPipe();
+renderTopics();
+renderLab();
+renderPatterns();
+renderFixes();
+renderRoadmap();
+renderReady();
+const firstCard = document.getElementById("t1");
+if (firstCard) setCard(firstCard, true);
+</script>
+
+<style>
+.split{display:grid;gap:16px}
+@media (min-width:820px){.split{grid-template-columns:minmax(0,1.02fr) minmax(0,1fr);align-items:start}}
+.card .body{padding-top:10px}
+.block h5:first-child{margin-top:8px}
+.modal .prompt .tag{display:block}
+#roleNote .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+.labout .codewrap{margin-top:12px}
+.pat .codewrap{flex:1}
+table.grid .null{color:var(--clay)}
+[hidden]{display:none!important}
+/* link back to the guide index */
+.brand .uplink{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);text-decoration:none;white-space:nowrap}
+.brand .uplink:hover{color:var(--accent)}
+</style>
+</body>
+</html>
