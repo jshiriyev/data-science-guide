@@ -24,6 +24,11 @@ window.DSG_CATALOG = {
           "title": "Python Fundamentals in 44 Topics",
           "blurb": "Python fundamentals in 44 topics: types, containers, flow control, functions, OOP, errors, files and regex, with live labs, worked patterns and 52 corrections to the course material.",
           "href": "python-programming/python-fundamentals.html"
+        },
+        {
+          "title": "Scientific Python in 44 Topics",
+          "blurb": "Scientific Python in 44 topics: NumPy arrays, Matplotlib and Seaborn, pandas cleaning, SciPy algorithms and scikit-learn pipelines, with five live labs, 12 worked patterns and 125 corrections to the course material.",
+          "href": "python-programming/scientific-python.html"
         }
       ]
     },
