@@ -19,7 +19,13 @@ window.DSG_CATALOG = {
       "id": "python-programming",
       "title": "Python Programming",
       "blurb": "The language itself, plus the idioms that show up in analysis code.",
-      "sheets": []
+      "sheets": [
+        {
+          "title": "Python Fundamentals in 44 Topics",
+          "blurb": "Python fundamentals in 44 topics: types, containers, flow control, functions, OOP, errors, files and regex, with live labs, worked patterns and 52 corrections to the course material.",
+          "href": "python-programming/python-fundamentals.html"
+        }
+      ]
     },
     {
       "id": "data-analytics-tools",
