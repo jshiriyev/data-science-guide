@@ -7,7 +7,13 @@ window.DSG_CATALOG = {
       "id": "data-science-overview",
       "title": "Data Science Overview",
       "blurb": "The shape of the field: workflow, roles, and how the pieces fit together.",
-      "sheets": []
+      "sheets": [
+        {
+          "title": "Data Science Overview in 43 Topics",
+          "blurb": "Data science overview in 43 topics: the ten-stage methodology, the tool ecosystem, and hands-on data preparation in pandas and SPSS Modeler, with four live labs, ten worked patterns and 88 corrections to the course material.",
+          "href": "data-science-overview/methodology-tools-and-preparation.html"
+        }
+      ]
     },
     {
       "id": "probability-and-statistics",
@@ -40,12 +46,7 @@ window.DSG_CATALOG = {
         {
           "title": "SQL in 40 Topics",
           "blurb": "Forty SQL topics with live labs, a pattern library, common bugs and a readiness check.",
-          "href": "data-analytics-tools/SQL_Cheat_Sheet.html"
-        },
-        {
-          "title": "SQL Quick Reference",
-          "blurb": "Query evaluation order, joins, aggregation, window functions, CTEs, DML/DDL, and the dialect differences that bite.",
-          "href": "data-analytics-tools/sql-quick-reference.html"
+          "href": "data-analytics-tools/sql-cheat-sheet.html"
         }
       ]
     },

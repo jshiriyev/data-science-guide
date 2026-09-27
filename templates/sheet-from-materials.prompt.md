@@ -10,7 +10,7 @@ You are in a folder of study material for one subject — most likely PDFs,
 PowerPoint decks, Jupyter notebooks, and possibly `.docx`, `.md`, `.sql`, `.csv`
 or screenshots. Your job is to read **all** of it and produce **one
 self-contained HTML cheat sheet** that teaches the subject the way
-`data-analytics-tools/SQL_Cheat_Sheet.html` in the `data-science-guide` repo
+`data-analytics-tools/sql-cheat-sheet.html` in the `data-science-guide` repo
 teaches SQL. Target subject: [SUBJECT — leave blank to infer from the files].
 Destination subject folder in the repo: [one of `data-science-overview`,
 `probability-and-statistics`, `machine-learning-algorithms`,

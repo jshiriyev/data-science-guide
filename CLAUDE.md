@@ -109,8 +109,14 @@ deploy later does not silently start stripping files.
 
 - `templates/cheatsheet.html` is excluded from the published site and, because
   it does not sit in a subject folder, is not picked up by the catalog either.
-- `data-analytics-tools/` holds two SQL sheets on purpose: `SQL_Cheat_Sheet.html`
-  (the owner's interactive review console) and `sql-quick-reference.html` (a
-  lookup reference built on the shared styles).
+- `data-analytics-tools/` once held two SQL sheets; `sql-quick-reference.html`
+  was merged into `sql-cheat-sheet.html` (the owner's interactive review
+  console) and deleted. Only what the console did not already cover was carried
+  over: string aggregation and percentiles into topic 9, NULL-safe equality into
+  topic 4, and the named `WINDOW` clause into topic 17.
+- `assets/css/sheet.css` and `assets/js/sheet.js` now have only one consumer,
+  `templates/cheatsheet.html`. They are the shared-style path for a sheet
+  written against the house CSS, so they stay even though no published sheet
+  currently uses them.
 - Writing these HTML files with shell heredocs is painful — the markup collides
   with shell quoting. Use the Write tool.

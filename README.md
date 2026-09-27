@@ -18,7 +18,7 @@ One new sheet goes up each week.
 | 6 | Big Data Principles | `big-data-principles/` |
 | 7 | Deep Learning Methods | `deep-learning-methods/` |
 
-Each folder holds one `.html` file per topic — `data-analytics-tools/SQL_Cheat_Sheet.html`,
+Each folder holds one `.html` file per topic — `data-analytics-tools/sql-cheat-sheet.html`,
 `data-analytics-tools/matplotlib.html`, and so on. File names are free-form; the
 landing page reads each sheet's `<title>`, not its filename.
 

@@ -515,12 +515,13 @@ WHERE  (first_name LIKE 'S%' OR last_name LIKE 'S%')   -- the parentheses are th
 {n:4,p:"P1",pf:"P1",c:"Extend",t:"NULL and three-valued logic",
  sum:"Unknown is a third truth value, and WHERE keeps only true.",
  src:"W1 pp. 65-69 · W2 null functions · LC cell 22",
- tags:"null unknown is null coalesce nullif nvl nvl2 three valued logic count distinct not in not exists missing",
+ tags:"null unknown is null coalesce nullif nvl nvl2 three valued logic count distinct not in not exists missing is distinct from null safe equality",
  keys:["Every comparison with NULL yields UNKNOWN, including NULL = NULL. Use IS NULL and IS NOT NULL.",
   "WHERE keeps rows whose predicate is TRUE. UNKNOWN is discarded like FALSE, but NOT UNKNOWN is still UNKNOWN.",
   "COALESCE returns the first non-NULL; NULLIF returns NULL when two values match. Oracle adds NVL and NVL2.",
   "COUNT(*) counts rows, COUNT(col) counts non-NULL values, COUNT(DISTINCT col) counts distinct non-NULL values.",
-  "Ordinary aggregates ignore NULL inputs and an empty SUM returns NULL, not zero. NULL, 0, an empty string and the text 'None' are four different things."],
+  "Ordinary aggregates ignore NULL inputs and an empty SUM returns NULL, not zero. NULL, 0, an empty string and the text 'None' are four different things.",
+  "IS DISTINCT FROM is NULL-safe inequality and IS NOT DISTINCT FROM is NULL-safe equality: two NULLs count as the same value, so the answer is TRUE or FALSE and never UNKNOWN. MySQL writes the equality form as <=>; where neither exists, spell out OR col IS NULL."],
  code:[{lab:"Assigned a manager who is not in the table",sql:`SELECT e.employee_id, e.manager_id
 FROM   employees e
 WHERE  e.manager_id IS NOT NULL                 -- exclude 'no manager assigned'
@@ -533,7 +534,19 @@ WHERE  department_id NOT IN (SELECT department_id FROM departments);
 -- Say what you mean instead
 SELECT COUNT(*) FROM employees e
 WHERE  NOT EXISTS (SELECT 1 FROM departments d
-                   WHERE d.department_id = e.department_id);`}],
+                   WHERE d.department_id = e.department_id);`},
+  {lab:"Not equal, without losing the unknowns",sql:`-- <> keeps only TRUE, so everyone with no department silently disappears
+SELECT employee_id FROM employees WHERE department_id <> 50;
+
+-- Decide what happens to them, then say it
+SELECT employee_id FROM employees
+WHERE  department_id <> 50 OR department_id IS NULL;   -- portable
+
+SELECT employee_id FROM employees
+WHERE  department_id IS DISTINCT FROM 50;              -- Postgres, DuckDB, SQLite 3.39+
+
+SELECT employee_id FROM employees
+WHERE  NOT (department_id <=> 50);                     -- MySQL`}],
  traps:[["NOT IN plus NULL equals nothing","x NOT IN (1, NULL) is never TRUE. NOT EXISTS expresses exclusion safely."],
   ["NULL in arithmetic and concatenation","salary * commission_pct is NULL for anyone without a commission; the row survives but the number is gone."],
   ["GROUP BY keeps NULL","NULL forms its own group, and ORDER BY places it first or last depending on the engine."]],
@@ -638,12 +651,14 @@ WHERE  hire_date >= CURRENT_DATE - INTERVAL '15 years';  -- Oracle: ADD_MONTHS(S
 {n:9,p:"P1",pf:"P1",c:"Present",t:"Aggregation, GROUP BY, and HAVING",
  sum:"The grouping columns are the grain of the output. WHERE filters rows, HAVING filters groups.",
  src:"W2 pp. 25-39 and all exercises · Census · School · Project",
- tags:"count sum min max avg group by having distinct aggregate rollup cube grouping sets grain",
+ tags:"count sum min max avg group by having distinct aggregate rollup cube grouping sets grain string_agg group_concat listagg percentile median quantile stddev variance spread",
  keys:["WHERE removes input rows before grouping; HAVING removes groups after it. An aggregate can only appear in HAVING, SELECT or ORDER BY.",
   "Every non-aggregated column in SELECT normally has to appear in GROUP BY. Postgres and MySQL relax this for columns functionally dependent on the grouped key.",
   "MAX(salary) returns a value, not the employee who earned it. To get the row, rank it or join back.",
   "AVG(DISTINCT salary) reweights the metric: three people on 3000 count once.",
-  "ROLLUP, CUBE and GROUPING SETS add subtotal rows; GROUPING() distinguishes a subtotal NULL from a data NULL."],
+  "ROLLUP, CUBE and GROUPING SETS add subtotal rows; GROUPING() distinguishes a subtotal NULL from a data NULL.",
+  "String aggregation rolls a group's values into one delimited string: STRING_AGG in Postgres, SQL Server and BigQuery, GROUP_CONCAT in MySQL and SQLite, LISTAGG in Oracle and Snowflake. Order inside the call, or the order of the list is arbitrary.",
+  "PERCENTILE_CONT interpolates between neighbouring values and PERCENTILE_DISC returns a value that is actually in the data, so the two disagree on the median of an even-sized group. Both take WITHIN GROUP (ORDER BY ...). STDDEV and VARIANCE come in sample and population forms whose default differs by engine."],
  code:[{lab:"Headcount, average and spread per department",sql:`SELECT d.department_id, d.department_name,
        COUNT(e.employee_id)          AS headcount,     -- not COUNT(*)
        ROUND(AVG(e.salary), 2)       AS avg_salary,
@@ -652,9 +667,24 @@ FROM   departments d
 LEFT   JOIN employees e ON e.department_id = d.department_id
 GROUP  BY d.department_id, d.department_name
 HAVING MAX(e.salary) - MIN(e.salary) > 5000
-ORDER  BY salary_spread DESC;`}],
+ORDER  BY salary_spread DESC;`},
+  {lab:"Median, spread, and a rolled-up member list",sql:`SELECT d.department_id,
+       COUNT(*)                                              AS headcount,
+       ROUND(AVG(e.salary), 2)                               AS avg_salary,
+       PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY e.salary) AS median_salary,
+       ROUND(STDDEV_SAMP(e.salary), 2)                       AS salary_stddev,
+       STRING_AGG(e.last_name, ', ' ORDER BY e.last_name)    AS members
+FROM   employees   e
+JOIN   departments d ON d.department_id = e.department_id
+GROUP  BY d.department_id;
+
+-- MySQL            : GROUP_CONCAT(e.last_name ORDER BY e.last_name SEPARATOR ', ')
+-- SQLite           : GROUP_CONCAT(e.last_name, ', ')   -- ORDER BY inside the call only from 3.44
+-- Oracle/Snowflake : LISTAGG(e.last_name, ', ') WITHIN GROUP (ORDER BY e.last_name)
+-- MySQL has no PERCENTILE_CONT; BigQuery uses APPROX_QUANTILES(salary, 100)[OFFSET(50)]`}],
  traps:[["COUNT(*) after a LEFT JOIN","An empty department still has one preserved row, so COUNT(*) reports 1 where COUNT(e.employee_id) reports 0."],
-  ["HAVING removes the empty groups again","The spread of an empty department is NULL, and NULL > 5000 is UNKNOWN. Add OR COUNT(e.employee_id) = 0 if those departments must stay."]],
+  ["HAVING removes the empty groups again","The spread of an empty department is NULL, and NULL > 5000 is UNKNOWN. Add OR COUNT(e.employee_id) = 0 if those departments must stay."],
+  ["A median is not an average","AVG and PERCENTILE_CONT(0.5) answer different questions, and on a skewed salary distribution they land far apart. Take the one the metric definition asks for, and say which it was."]],
  practice:"Return department headcount, average salary and salary spread, keeping departments with a spread above 5,000.",
  approach:"LEFT JOIN from departments so empty ones survive the join, count the child key, and be explicit about whether the HAVING clause is allowed to remove them again.",
  mastery:"Explain how to include departments with zero employees, and why COUNT(employee_id) matters after a left join."},
@@ -844,12 +874,13 @@ SELECT * FROM chain ORDER BY lvl, employee_id;
 {n:17,p:"P1",pf:"P1",c:"Extend",t:"Window functions and window frames",
  sum:"Keep the detail row and calculate across its neighbours.",
  src:"W4 pp. 30-36 · LC queue example",
- tags:"window over partition by order by frame rows range unbounded preceding current row peers analytic qualify",
+ tags:"window over partition by order by frame rows range unbounded preceding current row peers analytic qualify named window clause reuse",
  keys:["GROUP BY collapses rows; OVER() keeps them and adds a calculation alongside.",
   "PARTITION BY resets the calculation per group. The window ORDER BY defines the sequence inside the partition, not the output order.",
   "The frame is the slice of the partition the function sees. With an ORDER BY and no explicit frame, the default is RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW, which includes every peer row tied with the current one.",
   "ROWS counts physical rows; RANGE counts value peers. For cumulative and rolling work, state ROWS explicitly.",
-  "Ranking and offset functions ignore the frame; value functions such as LAST_VALUE are entirely controlled by it."],
+  "Ranking and offset functions ignore the frame; value functions such as LAST_VALUE are entirely controlled by it.",
+  "A named WINDOW clause states the specification once and reuses it by name, which is how several columns are provably on the same window. It sits after HAVING and before ORDER BY."],
  code:[{lab:"Detail, partition average, running total",sql:`SELECT employee_id, department_id, hire_date, salary,
        AVG(salary) OVER (PARTITION BY department_id)         AS dept_avg,
        SUM(salary) OVER (PARTITION BY department_id
@@ -857,7 +888,17 @@ SELECT * FROM chain ORDER BY lvl, employee_id;
                          ROWS BETWEEN UNBOUNDED PRECEDING
                                   AND CURRENT ROW)           AS running_salary
 FROM   employees
-ORDER  BY department_id, hire_date;`}],
+ORDER  BY department_id, hire_date;`},
+  {lab:"Name the window once, use it in several columns",sql:`SELECT employee_id, department_id, salary,
+       AVG(salary)          OVER w_dept AS dept_avg,
+       salary - AVG(salary) OVER w_dept AS vs_dept_avg,
+       RANK()               OVER w_rank AS salary_rank
+FROM   employees
+WINDOW w_dept AS (PARTITION BY department_id),
+       w_rank AS (PARTITION BY department_id ORDER BY salary DESC)
+ORDER  BY department_id, salary DESC;
+-- Postgres, MySQL 8+, SQLite, Oracle, DuckDB and BigQuery. SQL Server has no
+-- WINDOW clause: repeat the full OVER (...) on each column instead.`}],
  traps:[["Ties jump the running total","Under the default RANGE frame, three employees hired the same day all show the same cumulative figure, which already includes all three."],
   ["Filtering a window result","It cannot go in WHERE. Wrap the query in a CTE, or use QUALIFY where the engine has it."]],
  practice:"Show each employee's salary, the departmental average, and the cumulative salary in hire order.",
